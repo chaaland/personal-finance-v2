@@ -1,0 +1,81 @@
+"""Income tab component."""
+
+import plotly.graph_objects as go
+from dash import dcc, html
+
+from personal_finance.components.cards import metric_card
+from personal_finance.data.loader import FinanceData
+from personal_finance.theme import CHART_TEMPLATE, COLORS, STYLES
+from personal_finance.transforms import (
+    get_income_by_year,
+    get_ytd_gross_income,
+    get_ytd_net_income,
+)
+
+
+def create_income_chart(data: FinanceData) -> go.Figure:
+    """Create grouped bar chart of gross vs net income by year."""
+    df = get_income_by_year(data)
+
+    fig = go.Figure()
+
+    # Gross income bars
+    fig.add_trace(
+        go.Bar(
+            x=df["Year"].to_list(),
+            y=df["Gross_USD"].to_list(),
+            name="Gross",
+            marker_color=COLORS["chart_1"],
+        )
+    )
+
+    # Net income bars
+    fig.add_trace(
+        go.Bar(
+            x=df["Year"].to_list(),
+            y=df["Net_USD"].to_list(),
+            name="Net",
+            marker_color=COLORS["chart_2"],
+        )
+    )
+
+    fig.update_layout(
+        title="Annual Income: Gross vs Net",
+        xaxis_title="Year",
+        yaxis_title="USD",
+        template=CHART_TEMPLATE,
+        barmode="group",
+        legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "xanchor": "right", "x": 1},
+    )
+
+    return fig
+
+
+def create_income_tab(data: FinanceData) -> html.Div:
+    """Create the income tab content."""
+    ytd_gross = get_ytd_gross_income(data)
+    ytd_net = get_ytd_net_income(data)
+
+    return html.Div(
+        children=[
+            # Metrics row
+            html.Div(
+                style={**STYLES["grid"], "gridTemplateColumns": "repeat(2, 1fr)"},
+                children=[
+                    metric_card(
+                        label="Total Comp (YTD)",
+                        value=ytd_gross,
+                    ),
+                    metric_card(
+                        label="Net Pay (YTD)",
+                        value=ytd_net,
+                    ),
+                ],
+            ),
+            # Income chart
+            html.Div(
+                style=STYLES["chart_container"],
+                children=[dcc.Graph(figure=create_income_chart(data), config={"displayModeBar": False})],
+            ),
+        ]
+    )
