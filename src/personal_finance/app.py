@@ -1,9 +1,10 @@
 """Dash application entry point."""
 
 import base64
+from decimal import Decimal
 from pathlib import Path
 
-from dash import Dash, Input, Output, callback, html
+from dash import Dash, Input, Output, State, callback, html, no_update
 
 from personal_finance.components.layout import create_layout
 from personal_finance.data.loader import FinanceData, load_excel, load_excel_from_bytes
@@ -73,6 +74,65 @@ def create_app() -> Dash:
                     ),
                 ]
             )
+
+    @callback(
+        Output("fire-tab-content", "children"),
+        Input("fire-withdrawal-rate", "value"),
+        Input("fire-lookback-years", "value"),
+        prevent_initial_call=True,
+    )
+    def update_fire_tab(withdrawal_rate: float | None, lookback_years: int | None):
+        global _current_data
+
+        if _current_data is None:
+            return no_update
+
+        # Use defaults if invalid
+        wr = Decimal(str(withdrawal_rate / 100)) if withdrawal_rate else Decimal("0.04")
+        lb = int(lookback_years) if lookback_years else 3
+
+        from personal_finance.components.fire import (
+            create_fire_config_row,
+            create_fire_metrics_row,
+            create_fire_projection_chart,
+        )
+        from personal_finance.theme import STYLES
+        from personal_finance.transforms import (
+            get_current_runway_years,
+            get_fire_number,
+            get_projected_fire_date,
+        )
+
+        # Recalculate metrics
+        fire_number = get_fire_number(_current_data, wr)
+        runway_years = get_current_runway_years(_current_data)
+        projection = get_projected_fire_date(_current_data, wr, lb)
+
+        # Format FIRE date
+        if projection.years_to_fire is not None and projection.years_to_fire == 0:
+            fire_date_str = "FIRE Ready"
+            years_to_fire_str = "You've reached your target!"
+        elif projection.fire_date is not None:
+            fire_date_str = projection.fire_date.strftime("%b %Y")
+            years_to_fire_str = f"{float(projection.years_to_fire):.1f} years from now"
+        else:
+            fire_date_str = "N/A"
+            years_to_fire_str = "Insufficient growth data"
+
+        return [
+            create_fire_config_row(),
+            create_fire_metrics_row(
+                fire_number=fire_number,
+                runway_years=runway_years,
+                fire_date_str=fire_date_str,
+                years_to_fire_str=years_to_fire_str,
+                withdrawal_rate=float(wr) * 100,
+            ),
+            html.Div(
+                style=STYLES["chart_container"],
+                children=[create_fire_projection_chart(_current_data, wr, lb)],
+            ),
+        ]
 
     return app
 
