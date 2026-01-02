@@ -1,8 +1,14 @@
-"""Spending calculations and transformations."""
+"""Spending calculations and transformations.
+
+Uses Decimal types for all currency calculations.
+"""
+
+from datetime import timedelta
+from decimal import Decimal
 
 import polars as pl
 
-from personal_finance.data.loader import FinanceData
+from personal_finance.data.loader import CURRENCY_DTYPE, FinanceData
 
 
 def get_combined_spending(data: FinanceData) -> pl.DataFrame:
@@ -40,8 +46,6 @@ def get_monthly_spending_with_median(data: FinanceData, window_days: int = 120) 
 
     Returns DataFrame with columns: Dates, Total_USD, Median_USD
     """
-    from datetime import timedelta
-
     df = get_combined_spending(data)
 
     # Use rolling_median with time-based window
@@ -54,7 +58,7 @@ def get_monthly_spending_with_median(data: FinanceData, window_days: int = 120) 
     return df
 
 
-def get_ytd_spending(data: FinanceData) -> float:
+def get_ytd_spending(data: FinanceData) -> Decimal:
     """Get year-to-date spending total in USD.
 
     Uses the most recent date in the data as the "current" date.
@@ -66,10 +70,10 @@ def get_ytd_spending(data: FinanceData) -> float:
     current_year = most_recent_date.year
 
     ytd = combined.filter(pl.col("Dates").dt.year() == current_year)
-    return ytd.select(pl.col("Total_USD").sum()).row(0)[0] or 0.0
+    return ytd.select(pl.col("Total_USD").sum()).row(0)[0] or Decimal("0")
 
 
-def get_projected_annual_spend(data: FinanceData) -> float:
+def get_projected_annual_spend(data: FinanceData) -> Decimal:
     """Get projected annual spend based on YTD spending.
 
     Uses the most recent date in the data as the "current" date.
@@ -84,12 +88,12 @@ def get_projected_annual_spend(data: FinanceData) -> float:
     ytd_spend = get_ytd_spending(data)
 
     if months_elapsed == 0:
-        return 0.0
+        return Decimal("0")
 
-    return ytd_spend * (12 / months_elapsed)
+    return ytd_spend * Decimal(12) / Decimal(months_elapsed)
 
 
-def get_previous_year_spending(data: FinanceData) -> float:
+def get_previous_year_spending(data: FinanceData) -> Decimal:
     """Get total spending for the previous full year.
 
     Uses the most recent date in the data as the "current" date.
@@ -101,10 +105,10 @@ def get_previous_year_spending(data: FinanceData) -> float:
     previous_year = most_recent_date.year - 1
 
     prev_year_data = combined.filter(pl.col("Dates").dt.year() == previous_year)
-    return prev_year_data.select(pl.col("Total_USD").sum()).row(0)[0] or 0.0
+    return prev_year_data.select(pl.col("Total_USD").sum()).row(0)[0] or Decimal("0")
 
 
-def get_yoy_spending_comparison(data: FinanceData) -> tuple[float, float]:
+def get_yoy_spending_comparison(data: FinanceData) -> tuple[Decimal, Decimal]:
     """Compare projected current year spend to previous year.
 
     Returns:
@@ -114,9 +118,9 @@ def get_yoy_spending_comparison(data: FinanceData) -> tuple[float, float]:
     previous = get_previous_year_spending(data)
 
     if previous == 0:
-        return projected, 0.0
+        return projected, Decimal("0")
 
     absolute_diff = projected - previous
-    percentage_diff = (absolute_diff / previous) * 100
+    percentage_diff = (absolute_diff / previous) * Decimal(100)
 
     return absolute_diff, percentage_diff

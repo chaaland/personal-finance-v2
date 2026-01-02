@@ -1,8 +1,13 @@
-"""Income/compensation calculations and transformations."""
+"""Income/compensation calculations and transformations.
+
+Uses Decimal types for all currency calculations.
+"""
+
+from decimal import Decimal
 
 import polars as pl
 
-from personal_finance.data.loader import FinanceData
+from personal_finance.data.loader import CURRENCY_DTYPE, FinanceData
 
 
 def get_income_by_year(data: FinanceData) -> pl.DataFrame:
@@ -24,7 +29,7 @@ def get_income_by_year(data: FinanceData) -> pl.DataFrame:
     return yearly.sort("Year")
 
 
-def get_ytd_gross_income(data: FinanceData) -> float:
+def get_ytd_gross_income(data: FinanceData) -> Decimal:
     """Get year-to-date gross income in USD.
 
     Uses the most recent date in the data as the "current" date.
@@ -36,12 +41,12 @@ def get_ytd_gross_income(data: FinanceData) -> float:
     ytd = data.total_comp.filter(pl.col("Dates").dt.year() == current_year)
 
     if ytd.is_empty():
-        return 0.0
+        return Decimal("0")
 
-    return ytd.select((pl.col("Gross") * pl.col("Conversion")).sum()).row(0)[0] or 0.0
+    return ytd.select((pl.col("Gross") * pl.col("Conversion")).sum()).row(0)[0] or Decimal("0")
 
 
-def get_ytd_net_income(data: FinanceData) -> float:
+def get_ytd_net_income(data: FinanceData) -> Decimal:
     """Get year-to-date net income in USD.
 
     Uses the most recent date in the data as the "current" date.
@@ -53,9 +58,9 @@ def get_ytd_net_income(data: FinanceData) -> float:
     ytd = data.total_comp.filter(pl.col("Dates").dt.year() == current_year)
 
     if ytd.is_empty():
-        return 0.0
+        return Decimal("0")
 
-    return ytd.select((pl.col("Net") * pl.col("Conversion")).sum()).row(0)[0] or 0.0
+    return ytd.select((pl.col("Net") * pl.col("Conversion")).sum()).row(0)[0] or Decimal("0")
 
 
 def get_take_home_by_year(data: FinanceData) -> pl.DataFrame:

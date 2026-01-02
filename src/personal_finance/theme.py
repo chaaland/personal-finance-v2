@@ -7,6 +7,12 @@ Design direction: Luxurious warmth meets brutalist typography.
 - Generous whitespace and precise geometry
 """
 
+from decimal import Decimal
+from typing import Union
+
+# Type alias for numeric values that can be Decimal or float
+NumericValue = Union[Decimal, float]
+
 # Google Fonts import URL (add to HTML head or use @import in CSS)
 FONTS_URL = "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@400;500;600&display=swap"
 
@@ -239,26 +245,34 @@ STYLES = {
 }
 
 
-def format_currency(value: float) -> str:
-    """Format a number as USD currency."""
-    if abs(value) >= 1_000_000:
-        return f"${value / 1_000_000:,.2f}M"
-    elif abs(value) >= 1_000:
-        return f"${value / 1_000:,.1f}K"
+def format_currency(value: NumericValue) -> str:
+    """Format a number as USD currency.
+
+    Accepts both Decimal and float values for compatibility.
+    """
+    # Convert to float for formatting (Decimal formatting would be identical)
+    v = float(value)
+    if abs(v) >= 1_000_000:
+        return f"${v / 1_000_000:,.2f}M"
+    elif abs(v) >= 1_000:
+        return f"${v / 1_000:,.1f}K"
     else:
-        return f"${value:,.0f}"
+        return f"${v:,.0f}"
 
 
-def format_percentage(value: float) -> str:
-    """Format a number as a percentage."""
-    return f"{value:+.1f}%"
+def format_percentage(value: NumericValue) -> str:
+    """Format a number as a percentage.
+
+    Accepts both Decimal and float values for compatibility.
+    """
+    return f"{float(value):+.1f}%"
 
 
-def format_change(value: float, is_percentage: bool = False, invert_colors: bool = False) -> tuple[str, dict]:
+def format_change(value: NumericValue, is_percentage: bool = False, invert_colors: bool = False) -> tuple[str, dict]:
     """Format a change value with appropriate styling.
 
     Args:
-        value: The change value
+        value: The change value (Decimal or float)
         is_percentage: If True, format as percentage
         invert_colors: If True, positive values are red (bad) and negative are green (good)
     """
