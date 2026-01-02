@@ -40,12 +40,11 @@ def create_income_chart(data: FinanceData) -> go.Figure:
     )
 
     fig.update_layout(
-        title="Annual Income: Gross vs Net",
-        xaxis_title="Year",
-        yaxis_title="USD",
+        title="Annual Income",
+        xaxis_title="",
+        yaxis_title="",
         template=CHART_TEMPLATE,
         barmode="group",
-        legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "xanchor": "right", "x": 1},
     )
 
     return fig

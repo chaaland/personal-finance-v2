@@ -33,10 +33,7 @@ def create_summary_tab(data: FinanceData) -> html.Div:
                 value=current_networth,
                 change=ytd_nw_pct,
                 change_is_percentage=True,
-            ),
-            metric_card(
-                label="YTD Net Worth Change",
-                value=ytd_nw_change,
+                change_absolute=ytd_nw_change,
             ),
             metric_card(
                 label="Total Comp (YTD)",
@@ -47,10 +44,8 @@ def create_summary_tab(data: FinanceData) -> html.Div:
                 value=projected_spend,
                 change=yoy_spend_pct,
                 change_is_percentage=True,
-            ),
-            metric_card(
-                label="YoY Spend Change",
-                value=yoy_spend_diff,
+                invert_change_colors=True,
+                change_absolute=yoy_spend_diff,
             ),
             metric_card(
                 label="Savings Rate (This Year)",

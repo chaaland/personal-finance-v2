@@ -20,14 +20,16 @@ def create_networth_chart(data: FinanceData) -> go.Figure:
 
     fig = go.Figure()
 
-    # Total net worth (primary)
+    # Total net worth (primary) - with subtle fill
     fig.add_trace(
         go.Scatter(
             x=df["Dates"].to_list(),
             y=df["Total_USD"].to_list(),
             name="Total",
-            line={"color": COLORS["chart_1"], "width": 3},
+            line={"color": COLORS["chart_1"], "width": 2.5},
             mode="lines",
+            fill="tozeroy",
+            fillcolor="rgba(180, 83, 9, 0.08)",
         )
     )
 
@@ -37,7 +39,7 @@ def create_networth_chart(data: FinanceData) -> go.Figure:
             x=df["Dates"].to_list(),
             y=df["US_USD"].to_list(),
             name="US",
-            line={"color": COLORS["chart_2"], "width": 2},
+            line={"color": COLORS["chart_2"], "width": 1.5, "dash": "dot"},
             mode="lines",
         )
     )
@@ -48,18 +50,17 @@ def create_networth_chart(data: FinanceData) -> go.Figure:
             x=df["Dates"].to_list(),
             y=df["UK_USD"].to_list(),
             name="UK",
-            line={"color": COLORS["chart_3"], "width": 2},
+            line={"color": COLORS["chart_3"], "width": 1.5, "dash": "dot"},
             mode="lines",
         )
     )
 
     fig.update_layout(
         title="Net Worth Over Time",
-        xaxis_title="Date",
-        yaxis_title="USD",
+        xaxis_title="",
+        yaxis_title="",
         template=CHART_TEMPLATE,
         hovermode="x unified",
-        legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "xanchor": "right", "x": 1},
     )
 
     return fig
@@ -76,15 +77,16 @@ def create_yoy_networth_chart(data: FinanceData) -> go.Figure:
             x=df["Year"].to_list(),
             y=df["Change"].to_list(),
             marker_color=colors,
-            text=[f"{c / 1000:.0f}K" for c in df["Change"].to_list()],
+            text=[f"${c / 1000:+,.0f}K" for c in df["Change"].to_list()],
             textposition="outside",
+            textfont={"size": 11, "color": COLORS["text_secondary"]},
         )
     )
 
     fig.update_layout(
-        title="Year-over-Year Net Worth Change",
-        xaxis_title="Year",
-        yaxis_title="USD",
+        title="Year-over-Year Change",
+        xaxis_title="",
+        yaxis_title="",
         template=CHART_TEMPLATE,
     )
 
@@ -100,17 +102,14 @@ def create_networth_tab(data: FinanceData) -> html.Div:
         children=[
             # Metrics row
             html.Div(
-                style={**STYLES["grid"], "gridTemplateColumns": "repeat(2, 1fr)"},
+                style={**STYLES["grid"], "gridTemplateColumns": "repeat(1, 1fr)"},
                 children=[
                     metric_card(
                         label="Current Net Worth",
                         value=current_nw,
-                    ),
-                    metric_card(
-                        label="YTD Change",
-                        value=ytd_change,
                         change=ytd_pct,
                         change_is_percentage=True,
+                        change_absolute=ytd_change,
                     ),
                 ],
             ),

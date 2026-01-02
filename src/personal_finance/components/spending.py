@@ -25,14 +25,14 @@ def create_spending_chart(data: FinanceData) -> go.Figure:
             mode="lines",
             line={"color": COLORS["chart_1"], "width": 2},
             fill="tozeroy",
-            fillcolor="rgba(99, 102, 241, 0.2)",
+            fillcolor="rgba(180, 83, 9, 0.08)",
         )
     )
 
     fig.update_layout(
         title="Monthly Spending",
-        xaxis_title="Date",
-        yaxis_title="USD",
+        xaxis_title="",
+        yaxis_title="",
         template=CHART_TEMPLATE,
     )
 
@@ -52,13 +52,14 @@ def create_savings_rate_chart(data: FinanceData) -> go.Figure:
             marker_color=colors,
             text=[f"{r:.1f}%" for r in df["Savings_Rate"].to_list()],
             textposition="outside",
+            textfont={"size": 11, "color": COLORS["text_secondary"]},
         )
     )
 
     fig.update_layout(
         title="Savings Rate by Year",
-        xaxis_title="Year",
-        yaxis_title="Savings Rate (%)",
+        xaxis_title="",
+        yaxis_title="",
         template=CHART_TEMPLATE,
     )
 
@@ -74,17 +75,15 @@ def create_spending_tab(data: FinanceData) -> html.Div:
         children=[
             # Metrics row
             html.Div(
-                style={**STYLES["grid"], "gridTemplateColumns": "repeat(2, 1fr)"},
+                style={**STYLES["grid"], "gridTemplateColumns": "repeat(1, 1fr)"},
                 children=[
                     metric_card(
                         label="Projected Spend (This Year)",
                         value=projected_spend,
-                    ),
-                    metric_card(
-                        label="YoY Change",
-                        value=yoy_diff,
                         change=yoy_pct,
                         change_is_percentage=True,
+                        invert_change_colors=True,
+                        change_absolute=yoy_diff,
                     ),
                 ],
             ),

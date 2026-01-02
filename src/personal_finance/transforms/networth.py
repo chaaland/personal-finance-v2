@@ -8,20 +8,36 @@ from personal_finance.data.loader import FinanceData
 def get_combined_networth(data: FinanceData) -> pl.DataFrame:
     """Combine US and UK net worth into single DataFrame with USD values.
 
+    Uses forward-fill interpolation to handle misaligned dates between US and UK data.
+    This prevents jagged lines in charts when record-keeping dates don't match exactly.
+
     Returns DataFrame with columns: Dates, US_USD, UK_USD, Total_USD
     """
     us = data.us_networth.select(
         pl.col("Dates"),
         (pl.col("Net") * pl.col("Conversion")).alias("US_USD"),
-    )
+    ).sort("Dates")
 
     uk = data.uk_networth.select(
         pl.col("Dates"),
         (pl.col("Net") * pl.col("Conversion")).alias("UK_USD"),
+    ).sort("Dates")
+
+    # Get all unique dates from both datasets
+    all_dates = (
+        pl.concat([us.select("Dates"), uk.select("Dates")])
+        .unique()
+        .sort("Dates")
     )
 
-    # Join on dates, filling missing values with 0
-    combined = us.join(uk, on="Dates", how="outer_coalesce").with_columns(
+    # Use join_asof to forward-fill values from the most recent prior date
+    # strategy="backward" means: for each date, find the nearest prior (or equal) date
+    combined = all_dates.join_asof(us, on="Dates", strategy="backward").join_asof(
+        uk, on="Dates", strategy="backward"
+    )
+
+    # Fill any remaining nulls (dates before first record) with 0
+    combined = combined.with_columns(
         pl.col("US_USD").fill_null(0),
         pl.col("UK_USD").fill_null(0),
     )
@@ -42,6 +58,8 @@ def get_ytd_networth_change(data: FinanceData) -> tuple[float, float]:
     """Get year-to-date net worth change.
 
     Uses the most recent date in the data as the "current" date.
+    In January (when only one data point exists for the year), compares against
+    the last value from December of the previous year for a more useful comparison.
 
     Returns:
         Tuple of (absolute_change, percentage_change)
@@ -51,15 +69,22 @@ def get_ytd_networth_change(data: FinanceData) -> tuple[float, float]:
     # Use the most recent date in the data as "current"
     most_recent_date = combined.select("Dates").row(-1)[0]
     current_year = most_recent_date.year
+    current_value = combined.select("Total_USD").row(-1)[0]
 
-    # Get first value of current year
-    year_start = combined.filter(pl.col("Dates").dt.year() == current_year).sort("Dates")
+    # Get data for current year
+    year_data = combined.filter(pl.col("Dates").dt.year() == current_year).sort("Dates")
 
-    if year_start.is_empty():
+    if year_data.is_empty():
         return 0.0, 0.0
 
-    start_value = year_start.select("Total_USD").row(0)[0]
-    current_value = combined.select("Total_USD").row(-1)[0]
+    # If we only have one data point this year (January), compare against December
+    if len(year_data) == 1:
+        prev_year_data = combined.filter(pl.col("Dates").dt.year() == current_year - 1).sort("Dates")
+        if prev_year_data.is_empty():
+            return 0.0, 0.0
+        start_value = prev_year_data.select("Total_USD").row(-1)[0]  # Last value of previous year
+    else:
+        start_value = year_data.select("Total_USD").row(0)[0]  # First value of current year
 
     absolute_change = current_value - start_value
     percentage_change = (absolute_change / start_value) * 100 if start_value != 0 else 0.0

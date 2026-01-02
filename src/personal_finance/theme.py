@@ -1,36 +1,99 @@
-"""Dark theme styling for the dashboard."""
+"""Refined Swiss Banking aesthetic for the dashboard.
 
-# Color palette
+Design direction: Luxurious warmth meets brutalist typography.
+- Warm ivory/cream backgrounds with deep charcoal
+- Copper/bronze accents for that "old money" feel
+- Bold, oversized numbers with serif elegance
+- Generous whitespace and precise geometry
+"""
+
+# Google Fonts import URL (add to HTML head or use @import in CSS)
+FONTS_URL = "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@400;500;600&display=swap"
+
+# Color palette - Warm ivory with copper accents
 COLORS = {
-    "background": "#1a1a2e",
-    "card": "#252540",
-    "text_primary": "#ffffff",
-    "text_secondary": "#b0b0b0",
-    "positive": "#00d97e",
-    "negative": "#e63757",
-    "chart_1": "#6366f1",  # Indigo
-    "chart_2": "#06b6d4",  # Cyan
-    "chart_3": "#8b5cf6",  # Purple
-    "chart_4": "#14b8a6",  # Teal
+    # Backgrounds
+    "background": "#F7F5F0",  # Warm ivory
+    "card": "#FFFFFF",  # Pure white cards
+    "card_elevated": "#FFFEF9",  # Slightly warm white
+    # Text
+    "text_primary": "#1C1917",  # Deep charcoal (stone-900)
+    "text_secondary": "#78716C",  # Warm gray (stone-500)
+    "text_muted": "#A8A29E",  # Lighter warm gray
+    # Accents
+    "accent": "#B45309",  # Copper/amber
+    "accent_light": "#D97706",  # Lighter copper
+    "accent_glow": "rgba(180, 83, 9, 0.1)",  # Copper glow
+    # Semantic
+    "positive": "#166534",  # Deep forest green
+    "positive_bg": "rgba(22, 101, 52, 0.08)",
+    "negative": "#991B1B",  # Deep burgundy red
+    "negative_bg": "rgba(153, 27, 27, 0.08)",
+    # Charts - Earthy, sophisticated palette
+    "chart_1": "#B45309",  # Copper
+    "chart_2": "#1E3A5F",  # Navy
+    "chart_3": "#166534",  # Forest
+    "chart_4": "#7C2D12",  # Burnt sienna
+    # Borders and lines
+    "border": "#E7E5E4",  # Warm gray border
+    "border_strong": "#D6D3D1",
+    "divider": "#F5F5F4",
 }
 
-# Plotly chart template
+# Typography
+FONTS = {
+    "display": "'Cormorant Garamond', Georgia, 'Times New Roman', serif",
+    "body": "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif",
+}
+
+# Plotly chart template - Refined and minimal
 CHART_TEMPLATE = {
     "layout": {
-        "paper_bgcolor": COLORS["background"],
-        "plot_bgcolor": COLORS["background"],
-        "font": {"color": COLORS["text_primary"]},
+        "paper_bgcolor": COLORS["card"],
+        "plot_bgcolor": COLORS["card"],
+        "font": {
+            "family": FONTS["body"],
+            "color": COLORS["text_secondary"],
+            "size": 12,
+        },
+        "title": {
+            "font": {
+                "family": FONTS["display"],
+                "size": 20,
+                "color": COLORS["text_primary"],
+            },
+            "x": 0,
+            "xanchor": "left",
+        },
         "xaxis": {
-            "gridcolor": "#3a3a5a",
-            "linecolor": "#3a3a5a",
+            "gridcolor": COLORS["divider"],
+            "linecolor": COLORS["border"],
+            "tickfont": {"size": 11},
+            "showgrid": False,
+            "zeroline": False,
         },
         "yaxis": {
-            "gridcolor": "#3a3a5a",
-            "linecolor": "#3a3a5a",
+            "gridcolor": COLORS["divider"],
+            "linecolor": "rgba(0,0,0,0)",
+            "tickfont": {"size": 11},
+            "showgrid": True,
+            "gridwidth": 1,
+            "zeroline": False,
         },
         "legend": {
             "bgcolor": "rgba(0,0,0,0)",
-            "font": {"color": COLORS["text_secondary"]},
+            "font": {"color": COLORS["text_secondary"], "size": 11},
+            "orientation": "h",
+            "yanchor": "bottom",
+            "y": 1.02,
+            "xanchor": "left",
+            "x": 0,
+        },
+        "margin": {"t": 60, "r": 24, "b": 48, "l": 60},
+        "hoverlabel": {
+            "bgcolor": COLORS["text_primary"],
+            "font": {"color": COLORS["card"], "family": FONTS["body"]},
+            "bordercolor": COLORS["text_primary"],
         },
     }
 }
@@ -40,74 +103,138 @@ STYLES = {
     "page": {
         "backgroundColor": COLORS["background"],
         "minHeight": "100vh",
-        "padding": "20px",
-        "fontFamily": "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+        "padding": "40px 48px",
+        "fontFamily": FONTS["body"],
+        "color": COLORS["text_primary"],
     },
     "card": {
         "backgroundColor": COLORS["card"],
-        "borderRadius": "12px",
-        "padding": "24px",
-        "marginBottom": "16px",
+        "borderRadius": "2px",  # Sharp, minimal radius
+        "padding": "32px",
+        "marginBottom": "20px",
+        "border": f"1px solid {COLORS['border']}",
+        "boxShadow": "0 1px 3px rgba(28, 25, 23, 0.04)",
+        "position": "relative",
     },
     "metric_value": {
-        "fontSize": "32px",
-        "fontWeight": "bold",
+        "fontSize": "42px",
+        "fontWeight": "600",
+        "fontFamily": FONTS["display"],
         "color": COLORS["text_primary"],
         "margin": "0",
+        "letterSpacing": "-0.02em",
+        "lineHeight": "1.1",
     },
     "metric_label": {
-        "fontSize": "14px",
-        "color": COLORS["text_secondary"],
-        "marginBottom": "8px",
+        "fontSize": "11px",
+        "fontWeight": "600",
+        "fontFamily": FONTS["body"],
+        "color": COLORS["text_muted"],
+        "marginBottom": "12px",
+        "textTransform": "uppercase",
+        "letterSpacing": "0.1em",
     },
     "metric_change_positive": {
-        "fontSize": "14px",
+        "fontSize": "13px",
+        "fontWeight": "500",
         "color": COLORS["positive"],
-        "marginTop": "4px",
+        "marginTop": "12px",
+        "padding": "6px 10px",
+        "backgroundColor": COLORS["positive_bg"],
+        "borderRadius": "2px",
+        "display": "inline-block",
     },
     "metric_change_negative": {
-        "fontSize": "14px",
+        "fontSize": "13px",
+        "fontWeight": "500",
         "color": COLORS["negative"],
-        "marginTop": "4px",
+        "marginTop": "12px",
+        "padding": "6px 10px",
+        "backgroundColor": COLORS["negative_bg"],
+        "borderRadius": "2px",
+        "display": "inline-block",
     },
     "tab": {
-        "backgroundColor": COLORS["card"],
-        "color": COLORS["text_secondary"],
+        "backgroundColor": "transparent",
+        "color": COLORS["text_muted"],
         "border": "none",
-        "borderRadius": "8px 8px 0 0",
-        "padding": "12px 24px",
+        "borderBottom": f"2px solid transparent",
+        "borderRadius": "0",
+        "padding": "16px 24px",
+        "fontFamily": FONTS["body"],
+        "fontSize": "13px",
+        "fontWeight": "500",
+        "textTransform": "uppercase",
+        "letterSpacing": "0.08em",
+        "transition": "all 0.2s ease",
     },
     "tab_selected": {
-        "backgroundColor": COLORS["background"],
-        "color": COLORS["text_primary"],
+        "backgroundColor": "transparent",
+        "color": COLORS["accent"],
         "border": "none",
-        "borderRadius": "8px 8px 0 0",
-        "padding": "12px 24px",
-        "borderBottom": f"2px solid {COLORS['chart_1']}",
+        "borderBottom": f"2px solid {COLORS['accent']}",
+        "borderRadius": "0",
+        "padding": "16px 24px",
+        "fontFamily": FONTS["body"],
+        "fontSize": "13px",
+        "fontWeight": "600",
+        "textTransform": "uppercase",
+        "letterSpacing": "0.08em",
     },
     "header": {
         "display": "flex",
         "justifyContent": "space-between",
         "alignItems": "center",
-        "marginBottom": "24px",
+        "marginBottom": "48px",
+        "paddingBottom": "24px",
+        "borderBottom": f"1px solid {COLORS['border']}",
     },
     "title": {
-        "fontSize": "28px",
-        "fontWeight": "bold",
+        "fontSize": "32px",
+        "fontWeight": "600",
+        "fontFamily": FONTS["display"],
         "color": COLORS["text_primary"],
         "margin": "0",
+        "letterSpacing": "-0.02em",
     },
     "grid": {
         "display": "grid",
-        "gridTemplateColumns": "repeat(auto-fit, minmax(250px, 1fr))",
-        "gap": "16px",
-        "marginBottom": "24px",
+        "gridTemplateColumns": "repeat(auto-fit, minmax(280px, 1fr))",
+        "gap": "20px",
+        "marginBottom": "32px",
     },
     "chart_container": {
         "backgroundColor": COLORS["card"],
-        "borderRadius": "12px",
-        "padding": "16px",
-        "marginBottom": "16px",
+        "borderRadius": "2px",
+        "padding": "24px",
+        "marginBottom": "20px",
+        "border": f"1px solid {COLORS['border']}",
+        "boxShadow": "0 1px 3px rgba(28, 25, 23, 0.04)",
+    },
+    # New styles for enhanced components
+    "upload_button": {
+        "padding": "12px 24px",
+        "backgroundColor": COLORS["card"],
+        "border": f"1px solid {COLORS['border']}",
+        "borderRadius": "2px",
+        "cursor": "pointer",
+        "color": COLORS["text_secondary"],
+        "fontFamily": FONTS["body"],
+        "fontSize": "13px",
+        "fontWeight": "500",
+        "letterSpacing": "0.02em",
+        "transition": "all 0.2s ease",
+    },
+    "empty_state": {
+        "textAlign": "center",
+        "padding": "80px 40px",
+        "backgroundColor": COLORS["card"],
+        "border": f"1px solid {COLORS['border']}",
+        "borderRadius": "2px",
+    },
+    "tabs_container": {
+        "borderBottom": f"1px solid {COLORS['border']}",
+        "marginBottom": "32px",
     },
 }
 
@@ -127,13 +254,23 @@ def format_percentage(value: float) -> str:
     return f"{value:+.1f}%"
 
 
-def format_change(value: float, is_percentage: bool = False) -> tuple[str, dict]:
-    """Format a change value with appropriate styling."""
+def format_change(value: float, is_percentage: bool = False, invert_colors: bool = False) -> tuple[str, dict]:
+    """Format a change value with appropriate styling.
+
+    Args:
+        value: The change value
+        is_percentage: If True, format as percentage
+        invert_colors: If True, positive values are red (bad) and negative are green (good)
+    """
     if is_percentage:
         text = format_percentage(value)
     else:
         sign = "+" if value >= 0 else ""
         text = f"{sign}{format_currency(value)}"
 
-    style = STYLES["metric_change_positive"] if value >= 0 else STYLES["metric_change_negative"]
+    is_positive = value >= 0
+    if invert_colors:
+        is_positive = not is_positive
+
+    style = STYLES["metric_change_positive"] if is_positive else STYLES["metric_change_negative"]
     return text, style
