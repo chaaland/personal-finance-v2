@@ -1,5 +1,14 @@
 """Data transformation functions."""
 
+from personal_finance.transforms.fire import (
+    FireProjection,
+    get_annual_nw_growth,
+    get_current_runway_years,
+    get_fire_number,
+    get_fire_progress_pct,
+    get_fire_projection_series,
+    get_projected_fire_date,
+)
 from personal_finance.transforms.income import (
     get_income_by_year,
     get_take_home_by_year,
@@ -42,4 +51,11 @@ __all__ = [
     "get_take_home_by_year",
     "get_savings_rate_by_year",
     "get_current_year_savings_rate",
+    "FireProjection",
+    "get_fire_number",
+    "get_fire_progress_pct",
+    "get_current_runway_years",
+    "get_annual_nw_growth",
+    "get_projected_fire_date",
+    "get_fire_projection_series",
 ]
