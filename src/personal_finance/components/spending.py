@@ -7,7 +7,7 @@ from personal_finance.components.cards import metric_card
 from personal_finance.data.loader import FinanceData
 from personal_finance.theme import CHART_TEMPLATE, COLORS, STYLES
 from personal_finance.transforms import (
-    get_monthly_spending,
+    get_monthly_spending_with_median,
     get_projected_annual_spend,
     get_savings_rate_by_year,
     get_yoy_spending_comparison,
@@ -15,15 +15,31 @@ from personal_finance.transforms import (
 
 
 def create_spending_chart(data: FinanceData) -> go.Figure:
-    """Create monthly spending line chart."""
-    df = get_monthly_spending(data)
+    """Create monthly spending line chart with rolling median."""
+    df = get_monthly_spending_with_median(data)
 
-    fig = go.Figure(
+    fig = go.Figure()
+
+    # Raw data as faded/dotted line
+    fig.add_trace(
         go.Scatter(
             x=df["Dates"].to_list(),
             y=df["Total_USD"].to_list(),
             mode="lines",
-            line={"color": COLORS["chart_1"], "width": 2},
+            name="Monthly",
+            line={"color": COLORS["chart_1"], "width": 1, "dash": "dot"},
+            opacity=0.5,
+        )
+    )
+
+    # Rolling median as primary solid line with fill
+    fig.add_trace(
+        go.Scatter(
+            x=df["Dates"].to_list(),
+            y=df["Median_USD"].to_list(),
+            mode="lines",
+            name="4-Month Median",
+            line={"color": COLORS["chart_1"], "width": 2.5},
             fill="tozeroy",
             fillcolor="rgba(180, 83, 9, 0.08)",
         )
@@ -33,6 +49,7 @@ def create_spending_chart(data: FinanceData) -> go.Figure:
         title="Monthly Spending",
         xaxis_title="",
         yaxis_title="",
+        yaxis_tickprefix="$",
         template=CHART_TEMPLATE,
     )
 

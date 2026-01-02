@@ -31,6 +31,29 @@ def get_monthly_spending(data: FinanceData) -> pl.DataFrame:
     return get_combined_spending(data)
 
 
+def get_monthly_spending_with_median(data: FinanceData, window_days: int = 120) -> pl.DataFrame:
+    """Get monthly spending with rolling median.
+
+    Args:
+        data: Finance data
+        window_days: Rolling window size in days (default 120, ~4 months)
+
+    Returns DataFrame with columns: Dates, Total_USD, Median_USD
+    """
+    from datetime import timedelta
+
+    df = get_combined_spending(data)
+
+    # Use rolling_median with time-based window
+    df = df.with_columns(
+        pl.col("Total_USD")
+        .rolling_median_by("Dates", window_size=timedelta(days=window_days), closed="both")
+        .alias("Median_USD")
+    )
+
+    return df
+
+
 def get_ytd_spending(data: FinanceData) -> float:
     """Get year-to-date spending total in USD.
 

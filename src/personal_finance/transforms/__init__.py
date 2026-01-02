@@ -18,6 +18,7 @@ from personal_finance.transforms.savings import (
 )
 from personal_finance.transforms.spending import (
     get_monthly_spending,
+    get_monthly_spending_with_median,
     get_previous_year_spending,
     get_projected_annual_spend,
     get_yoy_spending_comparison,
@@ -30,6 +31,7 @@ __all__ = [
     "get_ytd_networth_change",
     "get_yoy_networth_changes",
     "get_monthly_spending",
+    "get_monthly_spending_with_median",
     "get_ytd_spending",
     "get_projected_annual_spend",
     "get_previous_year_spending",

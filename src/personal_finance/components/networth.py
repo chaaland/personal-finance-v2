@@ -59,6 +59,7 @@ def create_networth_chart(data: FinanceData) -> go.Figure:
         title="Net Worth Over Time",
         xaxis_title="",
         yaxis_title="",
+        yaxis_tickprefix="$",
         template=CHART_TEMPLATE,
         hovermode="x unified",
     )
@@ -87,6 +88,7 @@ def create_yoy_networth_chart(data: FinanceData) -> go.Figure:
         title="Year-over-Year Change",
         xaxis_title="",
         yaxis_title="",
+        yaxis_tickprefix="$",
         template=CHART_TEMPLATE,
     )
 

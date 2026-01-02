@@ -43,6 +43,7 @@ def create_income_chart(data: FinanceData) -> go.Figure:
         title="Annual Income",
         xaxis_title="",
         yaxis_title="",
+        yaxis_tickprefix="$",
         template=CHART_TEMPLATE,
         barmode="group",
     )
