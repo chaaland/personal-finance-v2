@@ -55,3 +55,79 @@ def metric_card(
         children.append(html.P(change_text, style=change_style))
 
     return html.Div(children=children, style=card_style)
+
+
+def fire_progress_card(
+    label: str,
+    progress_pct: float,
+    current_value: float,
+    target_value: float,
+) -> html.Div:
+    """Create a FIRE progress card showing percentage and values.
+
+    Args:
+        label: Card title/label
+        progress_pct: Percentage progress (e.g., 42.5)
+        current_value: Current net worth
+        target_value: FIRE number
+
+    Returns:
+        Dash HTML component for the card
+    """
+    card_style = {
+        **STYLES["card"],
+        "borderTop": f"3px solid {COLORS['accent']}",
+    }
+
+    return html.Div(
+        style=card_style,
+        children=[
+            html.P(label, style=STYLES["metric_label"]),
+            html.P(f"{progress_pct:.0f}%", style=STYLES["metric_value"]),
+            html.P(
+                f"{format_currency(current_value)} / {format_currency(target_value)}",
+                style={
+                    "fontSize": "13px",
+                    "color": COLORS["text_secondary"],
+                    "marginTop": "8px",
+                },
+            ),
+        ],
+    )
+
+
+def fire_date_card(
+    label: str,
+    fire_date_str: str,
+    years_remaining_str: str,
+) -> html.Div:
+    """Create a FIRE date card.
+
+    Args:
+        label: Card title/label
+        fire_date_str: Formatted date string (e.g., "Oct 2034")
+        years_remaining_str: Subtext (e.g., "8.5 years at current pace")
+
+    Returns:
+        Dash HTML component for the card
+    """
+    card_style = {
+        **STYLES["card"],
+        "borderTop": f"3px solid {COLORS['accent']}",
+    }
+
+    return html.Div(
+        style=card_style,
+        children=[
+            html.P(label, style=STYLES["metric_label"]),
+            html.P(fire_date_str, style=STYLES["metric_value"]),
+            html.P(
+                years_remaining_str,
+                style={
+                    "fontSize": "13px",
+                    "color": COLORS["text_secondary"],
+                    "marginTop": "8px",
+                },
+            ),
+        ],
+    )

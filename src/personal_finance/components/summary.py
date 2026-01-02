@@ -2,13 +2,16 @@
 
 from dash import html
 
-from personal_finance.components.cards import metric_card
+from personal_finance.components.cards import fire_date_card, fire_progress_card, metric_card
 from personal_finance.data.loader import FinanceData
 from personal_finance.theme import STYLES
 from personal_finance.transforms import (
     get_current_networth,
     get_current_year_savings_rate,
+    get_fire_number,
+    get_fire_progress_pct,
     get_projected_annual_spend,
+    get_projected_fire_date,
     get_yoy_spending_comparison,
     get_ytd_gross_income,
     get_ytd_networth_change,
@@ -17,6 +20,8 @@ from personal_finance.transforms import (
 
 def create_summary_tab(data: FinanceData) -> html.Div:
     """Create the summary tab content with key metrics."""
+    from decimal import Decimal
+
     # Calculate all metrics
     current_networth = get_current_networth(data)
     ytd_nw_change, ytd_nw_pct = get_ytd_networth_change(data)
@@ -24,6 +29,23 @@ def create_summary_tab(data: FinanceData) -> html.Div:
     projected_spend = get_projected_annual_spend(data)
     yoy_spend_diff, yoy_spend_pct = get_yoy_spending_comparison(data)
     savings_rate = get_current_year_savings_rate(data)
+
+    # FIRE metrics (using defaults: 4% withdrawal, 3 year lookback)
+    withdrawal_rate = Decimal("0.04")
+    fire_number = get_fire_number(data, withdrawal_rate)
+    fire_progress = get_fire_progress_pct(data, withdrawal_rate)
+    fire_projection = get_projected_fire_date(data, withdrawal_rate, lookback_years=3)
+
+    # Format FIRE date
+    if fire_projection.years_to_fire is not None and fire_projection.years_to_fire == 0:
+        fire_date_str = "FIRE Ready"
+        years_str = "Target reached!"
+    elif fire_projection.fire_date is not None:
+        fire_date_str = fire_projection.fire_date.strftime("%b %Y")
+        years_str = f"{float(fire_projection.years_to_fire):.1f} years at current pace"
+    else:
+        fire_date_str = "N/A"
+        years_str = "Insufficient data"
 
     return html.Div(
         style=STYLES["grid"],
@@ -51,6 +73,17 @@ def create_summary_tab(data: FinanceData) -> html.Div:
                 label="Savings Rate (This Year)",
                 value=savings_rate,
                 value_is_percentage=True,
+            ),
+            fire_progress_card(
+                label="FIRE Progress",
+                progress_pct=float(fire_progress),
+                current_value=float(current_networth),
+                target_value=float(fire_number),
+            ),
+            fire_date_card(
+                label="Projected FIRE Date",
+                fire_date_str=fire_date_str,
+                years_remaining_str=years_str,
             ),
         ],
     )
