@@ -72,7 +72,23 @@ def _normalize_df(df: pl.DataFrame, required_columns: list[str]) -> pl.DataFrame
     df = df.select(required_columns)
 
     # Ensure Dates is datetime
-    if df["Dates"].dtype != pl.Datetime:
+    if df["Dates"].dtype == pl.String:
+        # xlsx2csv sometimes produces dates with embedded quotes like: 2025"-"12"-"31
+        # Also handle YYYY-MM format (used in Total Comp sheet)
+        df = df.with_columns(
+            pl.col("Dates").str.replace_all('"', "").alias("Dates_clean")  # Remove any embedded quotes
+        )
+        # Try YYYY-MM-DD first, then YYYY-MM
+        sample = df["Dates_clean"][0]
+        if len(sample) == 10:  # YYYY-MM-DD format
+            df = df.with_columns(pl.col("Dates_clean").str.to_datetime("%Y-%m-%d").alias("Dates"))
+        else:  # YYYY-MM format - append -01 for first of month
+            df = df.with_columns((pl.col("Dates_clean") + "-01").str.to_datetime("%Y-%m-%d").alias("Dates"))
+        df = df.drop("Dates_clean")
+    elif df["Dates"].dtype == pl.Date:
+        # Convert Date to Datetime
+        df = df.with_columns(pl.col("Dates").cast(pl.Datetime))
+    elif df["Dates"].dtype != pl.Datetime:
         df = df.with_columns(pl.col("Dates").cast(pl.Datetime))
 
     # Drop rows with null dates
