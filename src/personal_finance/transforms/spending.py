@@ -1,7 +1,5 @@
 """Spending calculations and transformations."""
 
-from datetime import datetime
-
 import polars as pl
 
 from personal_finance.data.loader import FinanceData
@@ -34,9 +32,15 @@ def get_monthly_spending(data: FinanceData) -> pl.DataFrame:
 
 
 def get_ytd_spending(data: FinanceData) -> float:
-    """Get year-to-date spending total in USD."""
+    """Get year-to-date spending total in USD.
+
+    Uses the most recent date in the data as the "current" date.
+    """
     combined = get_combined_spending(data)
-    current_year = datetime.now().year
+
+    # Use the most recent date in the data as "current"
+    most_recent_date = combined.select("Dates").row(-1)[0]
+    current_year = most_recent_date.year
 
     ytd = combined.filter(pl.col("Dates").dt.year() == current_year)
     return ytd.select(pl.col("Total_USD").sum()).row(0)[0] or 0.0
@@ -45,10 +49,14 @@ def get_ytd_spending(data: FinanceData) -> float:
 def get_projected_annual_spend(data: FinanceData) -> float:
     """Get projected annual spend based on YTD spending.
 
+    Uses the most recent date in the data as the "current" date.
     Formula: (YTD spend) * (12 / months_elapsed)
     """
-    current_date = datetime.now()
-    months_elapsed = current_date.month
+    combined = get_combined_spending(data)
+
+    # Use the most recent date in the data as "current"
+    most_recent_date = combined.select("Dates").row(-1)[0]
+    months_elapsed = most_recent_date.month
 
     ytd_spend = get_ytd_spending(data)
 
@@ -59,9 +67,15 @@ def get_projected_annual_spend(data: FinanceData) -> float:
 
 
 def get_previous_year_spending(data: FinanceData) -> float:
-    """Get total spending for the previous full year."""
+    """Get total spending for the previous full year.
+
+    Uses the most recent date in the data as the "current" date.
+    """
     combined = get_combined_spending(data)
-    previous_year = datetime.now().year - 1
+
+    # Use the most recent date in the data as "current"
+    most_recent_date = combined.select("Dates").row(-1)[0]
+    previous_year = most_recent_date.year - 1
 
     prev_year_data = combined.filter(pl.col("Dates").dt.year() == previous_year)
     return prev_year_data.select(pl.col("Total_USD").sum()).row(0)[0] or 0.0

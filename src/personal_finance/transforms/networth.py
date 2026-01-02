@@ -1,7 +1,5 @@
 """Net worth calculations and transformations."""
 
-from datetime import datetime
-
 import polars as pl
 
 from personal_finance.data.loader import FinanceData
@@ -43,11 +41,16 @@ def get_current_networth(data: FinanceData) -> float:
 def get_ytd_networth_change(data: FinanceData) -> tuple[float, float]:
     """Get year-to-date net worth change.
 
+    Uses the most recent date in the data as the "current" date.
+
     Returns:
         Tuple of (absolute_change, percentage_change)
     """
     combined = get_combined_networth(data)
-    current_year = datetime.now().year
+
+    # Use the most recent date in the data as "current"
+    most_recent_date = combined.select("Dates").row(-1)[0]
+    current_year = most_recent_date.year
 
     # Get first value of current year
     year_start = combined.filter(pl.col("Dates").dt.year() == current_year).sort("Dates")

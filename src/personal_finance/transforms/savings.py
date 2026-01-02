@@ -1,7 +1,5 @@
 """Savings rate calculations."""
 
-from datetime import datetime
-
 import polars as pl
 
 from personal_finance.data.loader import FinanceData
@@ -47,8 +45,14 @@ def get_savings_rate_by_year(data: FinanceData) -> pl.DataFrame:
 
 
 def get_current_year_savings_rate(data: FinanceData) -> float:
-    """Get savings rate for the current year so far."""
-    current_year = datetime.now().year
+    """Get savings rate for the current year so far.
+
+    Uses the most recent date in the data as the "current" date.
+    """
+    # Use the most recent date in the spending data as "current"
+    combined = get_combined_spending(data)
+    most_recent_date = combined.select("Dates").row(-1)[0]
+    current_year = most_recent_date.year
 
     rates = get_savings_rate_by_year(data)
     current = rates.filter(pl.col("Year") == current_year)

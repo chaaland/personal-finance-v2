@@ -1,7 +1,5 @@
 """Income/compensation calculations and transformations."""
 
-from datetime import datetime
-
 import polars as pl
 
 from personal_finance.data.loader import FinanceData
@@ -27,8 +25,13 @@ def get_income_by_year(data: FinanceData) -> pl.DataFrame:
 
 
 def get_ytd_gross_income(data: FinanceData) -> float:
-    """Get year-to-date gross income in USD."""
-    current_year = datetime.now().year
+    """Get year-to-date gross income in USD.
+
+    Uses the most recent date in the data as the "current" date.
+    """
+    # Use the most recent date in the data as "current"
+    most_recent_date = data.total_comp.select("Dates").sort("Dates").row(-1)[0]
+    current_year = most_recent_date.year
 
     ytd = data.total_comp.filter(pl.col("Dates").dt.year() == current_year)
 
@@ -39,8 +42,13 @@ def get_ytd_gross_income(data: FinanceData) -> float:
 
 
 def get_ytd_net_income(data: FinanceData) -> float:
-    """Get year-to-date net income in USD."""
-    current_year = datetime.now().year
+    """Get year-to-date net income in USD.
+
+    Uses the most recent date in the data as the "current" date.
+    """
+    # Use the most recent date in the data as "current"
+    most_recent_date = data.total_comp.select("Dates").sort("Dates").row(-1)[0]
+    current_year = most_recent_date.year
 
     ytd = data.total_comp.filter(pl.col("Dates").dt.year() == current_year)
 
