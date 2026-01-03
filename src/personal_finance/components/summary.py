@@ -2,16 +2,17 @@
 
 from dash import html
 
-from personal_finance.components.cards import expandable_metric_card, fire_date_card, fire_progress_card, metric_card
+from personal_finance.components.cards import expandable_metric_card, fire_date_card, fire_progress_card
+from personal_finance.components.fire import FIRE_GOAL
 from personal_finance.data.loader import FinanceData
 from personal_finance.theme import STYLES
 from personal_finance.transforms import (
     get_current_networth,
     get_current_year_savings_rate,
-    get_fire_number,
     get_fire_progress_pct,
     get_projected_annual_spend,
     get_projected_fire_date,
+    get_savings_rate_details,
     get_spending_projection_details,
     get_yoy_income_comparison,
     get_yoy_spending_comparison,
@@ -24,8 +25,6 @@ from personal_finance.transforms import (
 
 def create_summary_tab(data: FinanceData) -> html.Div:
     """Create the summary tab content with key metrics."""
-    from decimal import Decimal
-
     # Calculate all metrics
     current_networth = get_current_networth(data)
     ytd_nw_change, ytd_nw_pct = get_ytd_networth_change(data)
@@ -37,11 +36,11 @@ def create_summary_tab(data: FinanceData) -> html.Div:
     yoy_spend_diff, yoy_spend_pct = get_yoy_spending_comparison(data)
     spend_details = get_spending_projection_details(data)
     savings_rate = get_current_year_savings_rate(data)
+    savings_details = get_savings_rate_details(data)
 
-    # FIRE metrics (using default fire goal derived from 4% withdrawal rate)
-    fire_goal = get_fire_number(data, Decimal("0.04"))
-    fire_progress = get_fire_progress_pct(data, fire_goal)
-    fire_projection = get_projected_fire_date(data, fire_goal=fire_goal, lookback_years=3)
+    # FIRE metrics
+    fire_progress = get_fire_progress_pct(data, FIRE_GOAL)
+    fire_projection = get_projected_fire_date(data, fire_goal=FIRE_GOAL, lookback_years=3)
 
     # Format FIRE date
     if fire_projection.years_to_fire is not None and fire_projection.years_to_fire == 0:
@@ -85,9 +84,13 @@ def create_summary_tab(data: FinanceData) -> html.Div:
                 change_absolute=yoy_spend_diff,
                 invert_change_colors=True,
             ),
-            metric_card(
+            expandable_metric_card(
+                card_id="savings-card",
                 label="Savings Rate (This Year)",
                 value=savings_rate,
+                detail_text=savings_details.format_explanation(),
+                change=savings_details.change,
+                change_is_percentage=True,
                 value_is_percentage=True,
             ),
             html.Div(
@@ -96,7 +99,7 @@ def create_summary_tab(data: FinanceData) -> html.Div:
                     label="FIRE Progress",
                     progress_pct=float(fire_progress),
                     current_value=float(current_networth),
-                    target_value=float(fire_goal),
+                    target_value=float(FIRE_GOAL),
                 ),
             ),
             html.Div(

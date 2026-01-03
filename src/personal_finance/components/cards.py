@@ -143,6 +143,7 @@ def expandable_metric_card(
     change_is_percentage: bool = False,
     change_absolute: float | None = None,
     invert_change_colors: bool = False,
+    value_is_percentage: bool = False,
 ) -> html.Div:
     """Create an expandable metric card with collapsible detail section.
 
@@ -155,11 +156,15 @@ def expandable_metric_card(
         change_is_percentage: If True, format change as percentage
         change_absolute: Optional absolute change value to display alongside percentage
         invert_change_colors: If True, positive change is red (bad), negative is green (good)
+        value_is_percentage: If True, format value as percentage
 
     Returns:
         Dash HTML component for the expandable card
     """
-    formatted_value = format_currency(value)
+    if value_is_percentage:
+        formatted_value = format_percentage(value).replace("+", "")
+    else:
+        formatted_value = format_currency(value)
 
     card_style = {
         **STYLES["card"],

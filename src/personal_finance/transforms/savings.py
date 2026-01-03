@@ -68,3 +68,54 @@ def get_current_year_savings_rate(data: FinanceData) -> Decimal:
         return Decimal("0")
 
     return current.select("Savings_Rate").row(0)[0] or Decimal("0")
+
+
+class SavingsRateDetails:
+    """Details about YoY savings rate comparison for display."""
+
+    def __init__(
+        self,
+        current_rate: Decimal,
+        current_year: int,
+        previous_rate: Decimal,
+        previous_year: int,
+        change: Decimal,
+    ):
+        self.current_rate = current_rate
+        self.current_year = current_year
+        self.previous_rate = previous_rate
+        self.previous_year = previous_year
+        self.change = change
+
+    def format_explanation(self) -> str:
+        """Format as human-readable explanation sentence."""
+        direction = "Increased" if self.change >= 0 else "Decreased"
+        return f"{direction} from {float(self.previous_rate):.0f}% ({self.previous_year}) to {float(self.current_rate):.0f}% ({self.current_year})"
+
+
+def get_savings_rate_details(data: FinanceData) -> SavingsRateDetails:
+    """Get detailed YoY savings rate comparison info.
+
+    Returns SavingsRateDetails with current/previous rates and years.
+    """
+    combined_df = get_combined_spending(data)
+    most_recent_date = combined_df.select("Dates").row(-1)[0]
+    current_year = most_recent_date.year
+
+    rates_df = get_savings_rate_by_year(data)
+
+    current_row = rates_df.filter(pl.col("Year") == current_year)
+    previous_row = rates_df.filter(pl.col("Year") == current_year - 1)
+
+    current_rate = current_row.select("Savings_Rate").row(0)[0] if not current_row.is_empty() else Decimal("0")
+    previous_rate = previous_row.select("Savings_Rate").row(0)[0] if not previous_row.is_empty() else Decimal("0")
+
+    change = current_rate - previous_rate
+
+    return SavingsRateDetails(
+        current_rate=current_rate,
+        current_year=current_year,
+        previous_rate=previous_rate,
+        previous_year=current_year - 1,
+        change=change,
+    )

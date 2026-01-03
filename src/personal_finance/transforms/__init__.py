@@ -27,8 +27,10 @@ from personal_finance.transforms.networth import (
     get_ytd_networth_details,
 )
 from personal_finance.transforms.savings import (
+    SavingsRateDetails,
     get_current_year_savings_rate,
     get_savings_rate_by_year,
+    get_savings_rate_details,
 )
 from personal_finance.transforms.spending import (
     SpendingComparisonDetails,
@@ -65,6 +67,8 @@ __all__ = [
     "get_take_home_by_year",
     "get_savings_rate_by_year",
     "get_current_year_savings_rate",
+    "get_savings_rate_details",
+    "SavingsRateDetails",
     "FireProjection",
     "get_fire_number",
     "get_fire_progress_pct",

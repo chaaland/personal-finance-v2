@@ -9,13 +9,15 @@ from personal_finance.data.loader import FinanceData
 from personal_finance.theme import CHART_TEMPLATE, COLORS, FONTS, STYLES
 from personal_finance.transforms import (
     get_current_runway_years,
-    get_fire_number,
     get_fire_projection_series,
     get_projected_fire_date,
 )
 
+# Hardcoded FIRE goal
+FIRE_GOAL = Decimal("3500000")
 
-def create_fire_config_row(fire_goal: float | None = None) -> html.Div:
+
+def create_fire_config_row() -> html.Div:
     """Create the configuration inputs row."""
     input_style = {
         "width": "80px",
@@ -45,17 +47,6 @@ def create_fire_config_row(fire_goal: float | None = None) -> html.Div:
         "marginLeft": "6px",
     }
 
-    fire_goal_input_style = {
-        **input_style,
-        "width": "120px",
-    }
-
-    prefix_style = {
-        "fontSize": "14px",
-        "color": COLORS["text_secondary"],
-        "marginRight": "6px",
-    }
-
     return html.Div(
         style={
             "display": "flex",
@@ -67,45 +58,6 @@ def create_fire_config_row(fire_goal: float | None = None) -> html.Div:
             "borderRadius": "2px",
         },
         children=[
-            html.Div(
-                children=[
-                    html.Label("FIRE Goal", style=label_style),
-                    html.Div(
-                        style={"display": "flex", "alignItems": "center"},
-                        children=[
-                            html.Span("$", style=prefix_style),
-                            dcc.Input(
-                                id="fire-goal",
-                                type="number",
-                                value=fire_goal,
-                                min=0,
-                                step=10000,
-                                style=fire_goal_input_style,
-                            ),
-                        ],
-                    ),
-                ]
-            ),
-            html.Div(
-                children=[
-                    html.Label("Withdrawal Rate", style=label_style),
-                    html.Div(
-                        style={"display": "flex", "alignItems": "center"},
-                        children=[
-                            dcc.Input(
-                                id="fire-withdrawal-rate",
-                                type="number",
-                                value=4.0,
-                                min=1.0,
-                                max=10.0,
-                                step=0.5,
-                                style=input_style,
-                            ),
-                            html.Span("%", style=suffix_style),
-                        ],
-                    ),
-                ]
-            ),
             html.Div(
                 children=[
                     html.Label("Lookback Period", style=label_style),
@@ -272,13 +224,10 @@ def create_fire_projection_chart(
 
 def create_fire_tab(data: FinanceData) -> html.Div:
     """Create the complete FIRE tab content."""
-    # Default values
     lookback_years = 3
 
-    # Calculate initial FIRE goal from spending (used as default)
-    initial_fire_goal = get_fire_number(data, Decimal("0.04"))
     runway_years = get_current_runway_years(data)
-    projection = get_projected_fire_date(data, fire_goal=initial_fire_goal, lookback_years=lookback_years)
+    projection = get_projected_fire_date(data, fire_goal=FIRE_GOAL, lookback_years=lookback_years)
 
     # Format FIRE date
     if projection.years_to_fire is not None and projection.years_to_fire == 0:
@@ -294,16 +243,16 @@ def create_fire_tab(data: FinanceData) -> html.Div:
     return html.Div(
         id="fire-tab-content",
         children=[
-            create_fire_config_row(fire_goal=float(initial_fire_goal)),
+            create_fire_config_row(),
             create_fire_metrics_row(
-                fire_number=initial_fire_goal,
+                fire_number=FIRE_GOAL,
                 runway_years=runway_years,
                 fire_date_str=fire_date_str,
                 years_to_fire_str=years_to_fire_str,
             ),
             html.Div(
                 style=STYLES["chart_container"],
-                children=[create_fire_projection_chart(data, initial_fire_goal, lookback_years)],
+                children=[create_fire_projection_chart(data, FIRE_GOAL, lookback_years)],
             ),
         ],
     )
