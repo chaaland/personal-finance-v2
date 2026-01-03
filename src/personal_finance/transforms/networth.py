@@ -91,6 +91,85 @@ def get_ytd_networth_change(data: FinanceData) -> tuple[Decimal, Decimal]:
     return absolute_change, percentage_change
 
 
+class NetworthChangeDetails:
+    """Details about YTD net worth change for display."""
+
+    def __init__(
+        self,
+        start_value: Decimal,
+        start_date: str,
+        end_value: Decimal,
+        end_date: str,
+        change: Decimal,
+        change_pct: Decimal,
+    ):
+        self.start_value = start_value
+        self.start_date = start_date
+        self.end_value = end_value
+        self.end_date = end_date
+        self.change = change
+        self.change_pct = change_pct
+
+    def format_explanation(self) -> str:
+        """Format as human-readable explanation sentence."""
+        direction = "Increased" if self.change >= 0 else "Decreased"
+        return f"{direction} from ${float(self.start_value):,.0f} on {self.start_date} to ${float(self.end_value):,.0f} on {self.end_date}"
+
+
+def get_ytd_networth_details(data: FinanceData) -> NetworthChangeDetails:
+    """Get detailed YTD net worth change info including dates.
+
+    Returns NetworthChangeDetails with start/end values and dates.
+    """
+    combined_df = get_combined_networth(data)
+
+    most_recent_date = combined_df.select("Dates").row(-1)[0]
+    current_year = most_recent_date.year
+    current_value = combined_df.select("Total_USD").row(-1)[0]
+
+    year_data_df = combined_df.filter(pl.col("Dates").dt.year() == current_year).sort("Dates")
+
+    if year_data_df.is_empty():
+        return NetworthChangeDetails(
+            start_value=Decimal("0"),
+            start_date="N/A",
+            end_value=current_value,
+            end_date=most_recent_date.strftime("%b %d, %Y"),
+            change=Decimal("0"),
+            change_pct=Decimal("0"),
+        )
+
+    # If we only have one data point this year, compare against December of previous year
+    if len(year_data_df) == 1:
+        prev_year_data_df = combined_df.filter(pl.col("Dates").dt.year() == current_year - 1).sort("Dates")
+        if prev_year_data_df.is_empty():
+            return NetworthChangeDetails(
+                start_value=Decimal("0"),
+                start_date="N/A",
+                end_value=current_value,
+                end_date=most_recent_date.strftime("%b %d, %Y"),
+                change=Decimal("0"),
+                change_pct=Decimal("0"),
+            )
+        start_value = prev_year_data_df.select("Total_USD").row(-1)[0]
+        start_date = prev_year_data_df.select("Dates").row(-1)[0]
+    else:
+        start_value = year_data_df.select("Total_USD").row(0)[0]
+        start_date = year_data_df.select("Dates").row(0)[0]
+
+    change = current_value - start_value
+    change_pct = (change / start_value) * Decimal(100) if start_value != 0 else Decimal("0")
+
+    return NetworthChangeDetails(
+        start_value=start_value,
+        start_date=start_date.strftime("%b %d, %Y"),
+        end_value=current_value,
+        end_date=most_recent_date.strftime("%b %d, %Y"),
+        change=change,
+        change_pct=change_pct,
+    )
+
+
 def get_yoy_networth_changes(data: FinanceData) -> pl.DataFrame:
     """Get year-over-year net worth changes.
 

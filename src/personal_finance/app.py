@@ -192,6 +192,75 @@ def create_app() -> Dash:
 
         return progress_card, date_card
 
+    @callback(
+        Output("networth-card-collapse", "is_open"),
+        Output("networth-card-chevron", "style"),
+        Input("networth-card-header", "n_clicks"),
+        State("networth-card-collapse", "is_open"),
+        prevent_initial_call=True,
+    )
+    def toggle_networth_collapse(n_clicks: int | None, is_open: bool):
+        if n_clicks is None:
+            return no_update, no_update
+
+        from personal_finance.theme import COLORS
+
+        new_is_open = not is_open
+        chevron_style = {
+            "fontSize": "12px",
+            "color": COLORS["text_muted"],
+            "transition": "transform 0.2s",
+            "marginTop": "4px",
+            "transform": "rotate(180deg)" if new_is_open else "rotate(0deg)",
+        }
+        return new_is_open, chevron_style
+
+    @callback(
+        Output("income-card-collapse", "is_open"),
+        Output("income-card-chevron", "style"),
+        Input("income-card-header", "n_clicks"),
+        State("income-card-collapse", "is_open"),
+        prevent_initial_call=True,
+    )
+    def toggle_income_collapse(n_clicks: int | None, is_open: bool):
+        if n_clicks is None:
+            return no_update, no_update
+
+        from personal_finance.theme import COLORS
+
+        new_is_open = not is_open
+        chevron_style = {
+            "fontSize": "12px",
+            "color": COLORS["text_muted"],
+            "transition": "transform 0.2s",
+            "marginTop": "4px",
+            "transform": "rotate(180deg)" if new_is_open else "rotate(0deg)",
+        }
+        return new_is_open, chevron_style
+
+    @callback(
+        Output("spending-card-collapse", "is_open"),
+        Output("spending-card-chevron", "style"),
+        Input("spending-card-header", "n_clicks"),
+        State("spending-card-collapse", "is_open"),
+        prevent_initial_call=True,
+    )
+    def toggle_spending_collapse(n_clicks: int | None, is_open: bool):
+        if n_clicks is None:
+            return no_update, no_update
+
+        from personal_finance.theme import COLORS
+
+        new_is_open = not is_open
+        chevron_style = {
+            "fontSize": "12px",
+            "color": COLORS["text_muted"],
+            "transition": "transform 0.2s",
+            "marginTop": "4px",
+            "transform": "rotate(180deg)" if new_is_open else "rotate(0deg)",
+        }
+        return new_is_open, chevron_style
+
     return app
 
 

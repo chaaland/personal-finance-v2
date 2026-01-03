@@ -2,7 +2,7 @@
 
 from dash import html
 
-from personal_finance.components.cards import fire_date_card, fire_progress_card, metric_card
+from personal_finance.components.cards import expandable_metric_card, fire_date_card, fire_progress_card, metric_card
 from personal_finance.data.loader import FinanceData
 from personal_finance.theme import STYLES
 from personal_finance.transforms import (
@@ -12,10 +12,13 @@ from personal_finance.transforms import (
     get_fire_progress_pct,
     get_projected_annual_spend,
     get_projected_fire_date,
+    get_spending_projection_details,
     get_yoy_income_comparison,
     get_yoy_spending_comparison,
     get_ytd_gross_income,
+    get_ytd_income_details,
     get_ytd_networth_change,
+    get_ytd_networth_details,
 )
 
 
@@ -26,10 +29,13 @@ def create_summary_tab(data: FinanceData) -> html.Div:
     # Calculate all metrics
     current_networth = get_current_networth(data)
     ytd_nw_change, ytd_nw_pct = get_ytd_networth_change(data)
+    nw_details = get_ytd_networth_details(data)
     ytd_gross = get_ytd_gross_income(data)
     yoy_income_diff, yoy_income_pct = get_yoy_income_comparison(data)
+    income_details = get_ytd_income_details(data)
     projected_spend = get_projected_annual_spend(data)
     yoy_spend_diff, yoy_spend_pct = get_yoy_spending_comparison(data)
+    spend_details = get_spending_projection_details(data)
     savings_rate = get_current_year_savings_rate(data)
 
     # FIRE metrics (using default fire goal derived from 4% withdrawal rate)
@@ -51,27 +57,33 @@ def create_summary_tab(data: FinanceData) -> html.Div:
     return html.Div(
         style=STYLES["grid"],
         children=[
-            metric_card(
+            expandable_metric_card(
+                card_id="networth-card",
                 label="Current Net Worth",
                 value=current_networth,
+                detail_text=nw_details.format_explanation(),
                 change=ytd_nw_pct,
                 change_is_percentage=True,
                 change_absolute=ytd_nw_change,
             ),
-            metric_card(
+            expandable_metric_card(
+                card_id="income-card",
                 label="Total Comp (YTD)",
                 value=ytd_gross,
+                detail_text=income_details.format_explanation(),
                 change=yoy_income_pct,
                 change_is_percentage=True,
                 change_absolute=yoy_income_diff,
             ),
-            metric_card(
+            expandable_metric_card(
+                card_id="spending-card",
                 label="Projected Spend (This Year)",
                 value=projected_spend,
+                detail_text=spend_details.format_explanation(),
                 change=yoy_spend_pct,
                 change_is_percentage=True,
-                invert_change_colors=True,
                 change_absolute=yoy_spend_diff,
+                invert_change_colors=True,
             ),
             metric_card(
                 label="Savings Rate (This Year)",

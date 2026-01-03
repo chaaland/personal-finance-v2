@@ -124,3 +124,61 @@ def get_yoy_spending_comparison(data: FinanceData) -> tuple[Decimal, Decimal]:
     percentage_diff = (absolute_diff / previous) * Decimal(100)
 
     return absolute_diff, percentage_diff
+
+
+class SpendingComparisonDetails:
+    """Details about projected spending comparison for display."""
+
+    def __init__(
+        self,
+        projected_value: Decimal,
+        current_year: int,
+        previous_value: Decimal,
+        previous_year: int,
+        ytd_spend: Decimal,
+        months_elapsed: int,
+        change: Decimal,
+        change_pct: Decimal,
+    ):
+        self.projected_value = projected_value
+        self.current_year = current_year
+        self.previous_value = previous_value
+        self.previous_year = previous_year
+        self.ytd_spend = ytd_spend
+        self.months_elapsed = months_elapsed
+        self.change = change
+        self.change_pct = change_pct
+
+    def format_explanation(self) -> str:
+        """Format as human-readable explanation sentence."""
+        return f"Based on ${float(self.ytd_spend):,.0f} spent through {self.months_elapsed} months, projecting ${float(self.projected_value):,.0f} vs ${float(self.previous_value):,.0f} in {self.previous_year}"
+
+
+def get_spending_projection_details(data: FinanceData) -> SpendingComparisonDetails:
+    """Get detailed spending projection info.
+
+    Returns SpendingComparisonDetails with projected/previous values and YTD context.
+    """
+    combined_df = get_combined_spending(data)
+
+    most_recent_date = combined_df.select("Dates").row(-1)[0]
+    current_year = most_recent_date.year
+    months_elapsed = most_recent_date.month
+
+    ytd_spend = get_ytd_spending(data)
+    projected = get_projected_annual_spend(data)
+    previous = get_previous_year_spending(data)
+
+    change = projected - previous
+    change_pct = (change / previous) * Decimal(100) if previous != 0 else Decimal("0")
+
+    return SpendingComparisonDetails(
+        projected_value=projected,
+        current_year=current_year,
+        previous_value=previous,
+        previous_year=current_year - 1,
+        ytd_spend=ytd_spend,
+        months_elapsed=months_elapsed,
+        change=change,
+        change_pct=change_pct,
+    )

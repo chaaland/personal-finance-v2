@@ -1,5 +1,6 @@
 """Main dashboard layout with refined Swiss banking aesthetic."""
 
+import dash_bootstrap_components as dbc
 from dash import dcc, html
 
 from personal_finance.components.fire import create_fire_tab
@@ -9,6 +10,9 @@ from personal_finance.components.spending import create_spending_tab
 from personal_finance.components.summary import create_summary_tab
 from personal_finance.data.loader import FinanceData
 from personal_finance.theme import COLORS, FONTS, FONTS_URL, STYLES
+
+# Bootstrap CSS URL for dbc.Collapse component
+BOOTSTRAP_CSS = "https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
 
 
 def create_header() -> html.Div:
@@ -99,12 +103,15 @@ def create_layout(data: FinanceData | None) -> html.Div:
     """Create the main dashboard layout with Google Fonts."""
     # Font loader - injects Google Fonts
     font_loader = html.Link(rel="stylesheet", href=FONTS_URL)
+    # Bootstrap CSS for dbc.Collapse component
+    bootstrap_loader = html.Link(rel="stylesheet", href=BOOTSTRAP_CSS)
 
     if data is None:
         return html.Div(
             style=STYLES["page"],
             children=[
                 font_loader,
+                bootstrap_loader,
                 create_header(),
                 html.Div(
                     style=STYLES["empty_state"],
@@ -148,6 +155,7 @@ def create_layout(data: FinanceData | None) -> html.Div:
         style=STYLES["page"],
         children=[
             font_loader,
+            bootstrap_loader,
             create_header(),
             create_tabs(data),
         ],

@@ -10,27 +10,33 @@ from personal_finance.transforms.fire import (
     get_projected_fire_date,
 )
 from personal_finance.transforms.income import (
+    IncomeComparisonDetails,
     get_income_by_year,
     get_take_home_by_year,
     get_yoy_income_comparison,
     get_ytd_gross_income,
+    get_ytd_income_details,
     get_ytd_net_income,
 )
 from personal_finance.transforms.networth import (
+    NetworthChangeDetails,
     get_combined_networth,
     get_current_networth,
     get_yoy_networth_changes,
     get_ytd_networth_change,
+    get_ytd_networth_details,
 )
 from personal_finance.transforms.savings import (
     get_current_year_savings_rate,
     get_savings_rate_by_year,
 )
 from personal_finance.transforms.spending import (
+    SpendingComparisonDetails,
     get_monthly_spending,
     get_monthly_spending_with_median,
     get_previous_year_spending,
     get_projected_annual_spend,
+    get_spending_projection_details,
     get_yoy_spending_comparison,
     get_ytd_spending,
 )
@@ -39,17 +45,23 @@ __all__ = [
     "get_combined_networth",
     "get_current_networth",
     "get_ytd_networth_change",
+    "get_ytd_networth_details",
     "get_yoy_networth_changes",
+    "NetworthChangeDetails",
     "get_monthly_spending",
     "get_monthly_spending_with_median",
     "get_ytd_spending",
     "get_projected_annual_spend",
     "get_previous_year_spending",
     "get_yoy_spending_comparison",
+    "get_spending_projection_details",
+    "SpendingComparisonDetails",
     "get_income_by_year",
     "get_ytd_gross_income",
     "get_ytd_net_income",
     "get_yoy_income_comparison",
+    "get_ytd_income_details",
+    "IncomeComparisonDetails",
     "get_take_home_by_year",
     "get_savings_rate_by_year",
     "get_current_year_savings_rate",
