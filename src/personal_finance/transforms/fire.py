@@ -40,21 +40,20 @@ def get_fire_number(data: FinanceData, withdrawal_rate: Decimal = Decimal("0.04"
     return projected_spend / withdrawal_rate
 
 
-def get_fire_progress_pct(data: FinanceData, withdrawal_rate: Decimal = Decimal("0.04")) -> Decimal:
-    """Calculate percentage progress toward FIRE number.
+def get_fire_progress_pct(data: FinanceData, fire_goal: Decimal) -> Decimal:
+    """Calculate percentage progress toward FIRE goal.
 
     Args:
         data: Finance data
-        withdrawal_rate: Safe withdrawal rate as decimal
+        fire_goal: Target FIRE number in USD
 
     Returns:
         Progress percentage (e.g., 42.5 for 42.5%)
     """
-    fire_number = get_fire_number(data, withdrawal_rate)
-    if fire_number == 0:
+    if fire_goal == 0:
         return Decimal("0")
     current_nw = get_current_networth(data)
-    return (current_nw / fire_number) * Decimal("100")
+    return (current_nw / fire_goal) * Decimal("100")
 
 
 def get_current_runway_years(data: FinanceData) -> Decimal:
@@ -117,20 +116,20 @@ def get_annual_nw_growth(data: FinanceData, lookback_years: int = 3) -> Decimal:
 
 def get_projected_fire_date(
     data: FinanceData,
-    withdrawal_rate: Decimal = Decimal("0.04"),
+    fire_goal: Decimal,
     lookback_years: int = 3,
 ) -> FireProjection:
     """Project when FIRE will be achieved based on historical growth.
 
     Args:
         data: Finance data
-        withdrawal_rate: Safe withdrawal rate as decimal
+        fire_goal: Target FIRE number in USD
         lookback_years: Years of history to use for growth calculation
 
     Returns:
         FireProjection with date, years to FIRE, and annual growth
     """
-    fire_number = get_fire_number(data, withdrawal_rate)
+    fire_number = fire_goal
     current_nw = get_current_networth(data)
     annual_growth = get_annual_nw_growth(data, lookback_years)
 
@@ -159,7 +158,7 @@ def get_projected_fire_date(
 
 def get_fire_projection_series(
     data: FinanceData,
-    withdrawal_rate: Decimal = Decimal("0.04"),
+    fire_goal: Decimal,
     lookback_years: int = 3,
     projection_years: int = 2,
 ) -> tuple[pl.DataFrame, pl.DataFrame, Decimal]:
@@ -167,7 +166,7 @@ def get_fire_projection_series(
 
     Args:
         data: Finance data
-        withdrawal_rate: Safe withdrawal rate as decimal
+        fire_goal: Target FIRE number in USD
         lookback_years: Years of history for growth calculation
         projection_years: Years to project into future
 
@@ -180,7 +179,7 @@ def get_fire_projection_series(
     from personal_finance.data.loader import CURRENCY_DTYPE
 
     historical = get_combined_networth(data).select("Dates", "Total_USD")
-    fire_number = get_fire_number(data, withdrawal_rate)
+    fire_number = fire_goal
     annual_growth = get_annual_nw_growth(data, lookback_years)
 
     if historical.is_empty():

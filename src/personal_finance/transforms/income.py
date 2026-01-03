@@ -63,6 +63,39 @@ def get_ytd_net_income(data: FinanceData) -> Decimal:
     return ytd.select((pl.col("Net") * pl.col("Conversion")).sum()).row(0)[0] or Decimal("0")
 
 
+def get_yoy_income_comparison(data: FinanceData) -> tuple[Decimal, Decimal]:
+    """Compare YTD gross income to same period last year.
+
+    Returns:
+        Tuple of (absolute_difference, percentage_difference)
+    """
+    dates_col = pl.col("Dates")
+    gross_usd_col = pl.col("Gross") * pl.col("Conversion")
+
+    most_recent_date = data.total_comp.select("Dates").sort("Dates").row(-1)[0]
+    current_year = most_recent_date.year
+
+    ytd_current = get_ytd_gross_income(data)
+
+    # Get income for same period last year (up to same month)
+    prev_year_df = data.total_comp.filter(
+        (dates_col.dt.year() == current_year - 1) & (dates_col.dt.month() <= most_recent_date.month)
+    )
+
+    if prev_year_df.is_empty():
+        return ytd_current, Decimal("0")
+
+    ytd_previous = prev_year_df.select(gross_usd_col.sum()).row(0)[0] or Decimal("0")
+
+    if ytd_previous == 0:
+        return ytd_current, Decimal("0")
+
+    absolute_diff = ytd_current - ytd_previous
+    percentage_diff = (absolute_diff / ytd_previous) * Decimal(100)
+
+    return absolute_diff, percentage_diff
+
+
 def get_take_home_by_year(data: FinanceData) -> pl.DataFrame:
     """Get take-home pay (Net + Pension Contrib) per year in USD.
 

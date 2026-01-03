@@ -12,6 +12,7 @@ from personal_finance.transforms.fire import (
 from personal_finance.transforms.income import (
     get_income_by_year,
     get_take_home_by_year,
+    get_yoy_income_comparison,
     get_ytd_gross_income,
     get_ytd_net_income,
 )
@@ -48,6 +49,7 @@ __all__ = [
     "get_income_by_year",
     "get_ytd_gross_income",
     "get_ytd_net_income",
+    "get_yoy_income_comparison",
     "get_take_home_by_year",
     "get_savings_rate_by_year",
     "get_current_year_savings_rate",

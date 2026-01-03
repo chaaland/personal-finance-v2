@@ -15,7 +15,7 @@ from personal_finance.transforms import (
 )
 
 
-def create_fire_config_row() -> html.Div:
+def create_fire_config_row(fire_goal: float | None = None) -> html.Div:
     """Create the configuration inputs row."""
     input_style = {
         "width": "80px",
@@ -45,6 +45,17 @@ def create_fire_config_row() -> html.Div:
         "marginLeft": "6px",
     }
 
+    fire_goal_input_style = {
+        **input_style,
+        "width": "120px",
+    }
+
+    prefix_style = {
+        "fontSize": "14px",
+        "color": COLORS["text_secondary"],
+        "marginRight": "6px",
+    }
+
     return html.Div(
         style={
             "display": "flex",
@@ -56,6 +67,25 @@ def create_fire_config_row() -> html.Div:
             "borderRadius": "2px",
         },
         children=[
+            html.Div(
+                children=[
+                    html.Label("FIRE Goal", style=label_style),
+                    html.Div(
+                        style={"display": "flex", "alignItems": "center"},
+                        children=[
+                            html.Span("$", style=prefix_style),
+                            dcc.Input(
+                                id="fire-goal",
+                                type="number",
+                                value=fire_goal,
+                                min=0,
+                                step=10000,
+                                style=fire_goal_input_style,
+                            ),
+                        ],
+                    ),
+                ]
+            ),
             html.Div(
                 children=[
                     html.Label("Withdrawal Rate", style=label_style),
@@ -105,7 +135,6 @@ def create_fire_metrics_row(
     runway_years: Decimal,
     fire_date_str: str,
     years_to_fire_str: str,
-    withdrawal_rate: float,
 ) -> html.Div:
     """Create the metrics row with three cards."""
     # Custom card for FIRE number with subtext
@@ -115,18 +144,10 @@ def create_fire_metrics_row(
             "borderTop": f"3px solid {COLORS['accent']}",
         },
         children=[
-            html.P("FIRE Number", style=STYLES["metric_label"]),
+            html.P("FIRE Goal", style=STYLES["metric_label"]),
             html.P(
                 f"${float(fire_number):,.0f}",
                 style=STYLES["metric_value"],
-            ),
-            html.P(
-                f"at {withdrawal_rate:.1f}% withdrawal rate",
-                style={
-                    "fontSize": "13px",
-                    "color": COLORS["text_secondary"],
-                    "marginTop": "8px",
-                },
             ),
         ],
     )
@@ -185,13 +206,14 @@ def create_fire_metrics_row(
 
 def create_fire_projection_chart(
     data: FinanceData,
-    withdrawal_rate: Decimal,
+    fire_goal: Decimal,
     lookback_years: int,
 ) -> dcc.Graph:
     """Create the FIRE projection chart."""
-    historical, projection, fire_number = get_fire_projection_series(
-        data, withdrawal_rate, lookback_years, projection_years=2
+    historical, projection, _ = get_fire_projection_series(
+        data, fire_goal=fire_goal, lookback_years=lookback_years, projection_years=2
     )
+    fire_number = fire_goal
 
     fig = go.Figure()
 
@@ -251,13 +273,12 @@ def create_fire_projection_chart(
 def create_fire_tab(data: FinanceData) -> html.Div:
     """Create the complete FIRE tab content."""
     # Default values
-    withdrawal_rate = Decimal("0.04")
     lookback_years = 3
 
-    # Calculate metrics
-    fire_number = get_fire_number(data, withdrawal_rate)
+    # Calculate initial FIRE goal from spending (used as default)
+    initial_fire_goal = get_fire_number(data, Decimal("0.04"))
     runway_years = get_current_runway_years(data)
-    projection = get_projected_fire_date(data, withdrawal_rate, lookback_years)
+    projection = get_projected_fire_date(data, fire_goal=initial_fire_goal, lookback_years=lookback_years)
 
     # Format FIRE date
     if projection.years_to_fire is not None and projection.years_to_fire == 0:
@@ -273,17 +294,16 @@ def create_fire_tab(data: FinanceData) -> html.Div:
     return html.Div(
         id="fire-tab-content",
         children=[
-            create_fire_config_row(),
+            create_fire_config_row(fire_goal=float(initial_fire_goal)),
             create_fire_metrics_row(
-                fire_number=fire_number,
+                fire_number=initial_fire_goal,
                 runway_years=runway_years,
                 fire_date_str=fire_date_str,
                 years_to_fire_str=years_to_fire_str,
-                withdrawal_rate=float(withdrawal_rate) * 100,
             ),
             html.Div(
                 style=STYLES["chart_container"],
-                children=[create_fire_projection_chart(data, withdrawal_rate, lookback_years)],
+                children=[create_fire_projection_chart(data, initial_fire_goal, lookback_years)],
             ),
         ],
     )

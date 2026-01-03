@@ -12,6 +12,7 @@ from personal_finance.transforms import (
     get_fire_progress_pct,
     get_projected_annual_spend,
     get_projected_fire_date,
+    get_yoy_income_comparison,
     get_yoy_spending_comparison,
     get_ytd_gross_income,
     get_ytd_networth_change,
@@ -26,15 +27,15 @@ def create_summary_tab(data: FinanceData) -> html.Div:
     current_networth = get_current_networth(data)
     ytd_nw_change, ytd_nw_pct = get_ytd_networth_change(data)
     ytd_gross = get_ytd_gross_income(data)
+    yoy_income_diff, yoy_income_pct = get_yoy_income_comparison(data)
     projected_spend = get_projected_annual_spend(data)
     yoy_spend_diff, yoy_spend_pct = get_yoy_spending_comparison(data)
     savings_rate = get_current_year_savings_rate(data)
 
-    # FIRE metrics (using defaults: 4% withdrawal, 3 year lookback)
-    withdrawal_rate = Decimal("0.04")
-    fire_number = get_fire_number(data, withdrawal_rate)
-    fire_progress = get_fire_progress_pct(data, withdrawal_rate)
-    fire_projection = get_projected_fire_date(data, withdrawal_rate, lookback_years=3)
+    # FIRE metrics (using default fire goal derived from 4% withdrawal rate)
+    fire_goal = get_fire_number(data, Decimal("0.04"))
+    fire_progress = get_fire_progress_pct(data, fire_goal)
+    fire_projection = get_projected_fire_date(data, fire_goal=fire_goal, lookback_years=3)
 
     # Format FIRE date
     if fire_projection.years_to_fire is not None and fire_projection.years_to_fire == 0:
@@ -60,6 +61,9 @@ def create_summary_tab(data: FinanceData) -> html.Div:
             metric_card(
                 label="Total Comp (YTD)",
                 value=ytd_gross,
+                change=yoy_income_pct,
+                change_is_percentage=True,
+                change_absolute=yoy_income_diff,
             ),
             metric_card(
                 label="Projected Spend (This Year)",
@@ -74,16 +78,22 @@ def create_summary_tab(data: FinanceData) -> html.Div:
                 value=savings_rate,
                 value_is_percentage=True,
             ),
-            fire_progress_card(
-                label="FIRE Progress",
-                progress_pct=float(fire_progress),
-                current_value=float(current_networth),
-                target_value=float(fire_number),
+            html.Div(
+                id="summary-fire-progress-card",
+                children=fire_progress_card(
+                    label="FIRE Progress",
+                    progress_pct=float(fire_progress),
+                    current_value=float(current_networth),
+                    target_value=float(fire_goal),
+                ),
             ),
-            fire_date_card(
-                label="Projected FIRE Date",
-                fire_date_str=fire_date_str,
-                years_remaining_str=years_str,
+            html.Div(
+                id="summary-fire-date-card",
+                children=fire_date_card(
+                    label="Projected FIRE Date",
+                    fire_date_str=fire_date_str,
+                    years_remaining_str=years_str,
+                ),
             ),
         ],
     )

@@ -77,19 +77,15 @@ def create_app() -> Dash:
 
     @callback(
         Output("fire-tab-content", "children"),
-        Input("fire-withdrawal-rate", "value"),
+        Input("fire-goal", "value"),
         Input("fire-lookback-years", "value"),
         prevent_initial_call=True,
     )
-    def update_fire_tab(withdrawal_rate: float | None, lookback_years: int | None):
+    def update_fire_tab(fire_goal: float | None, lookback_years: int | None):
         global _current_data
 
         if _current_data is None:
             return no_update
-
-        # Use defaults if invalid
-        wr = Decimal(str(withdrawal_rate / 100)) if withdrawal_rate else Decimal("0.04")
-        lb = int(lookback_years) if lookback_years else 3
 
         from personal_finance.components.fire import (
             create_fire_config_row,
@@ -103,10 +99,17 @@ def create_app() -> Dash:
             get_projected_fire_date,
         )
 
-        # Recalculate metrics
-        fire_number = get_fire_number(_current_data, wr)
+        # Use defaults if invalid
+        lb = int(lookback_years) if lookback_years else 3
+
+        # Use provided fire_goal or calculate default from spending
+        if fire_goal is not None and fire_goal > 0:
+            fire_goal_decimal = Decimal(str(fire_goal))
+        else:
+            fire_goal_decimal = get_fire_number(_current_data, Decimal("0.04"))
+
         runway_years = get_current_runway_years(_current_data)
-        projection = get_projected_fire_date(_current_data, wr, lb)
+        projection = get_projected_fire_date(_current_data, fire_goal=fire_goal_decimal, lookback_years=lb)
 
         # Format FIRE date
         if projection.years_to_fire is not None and projection.years_to_fire == 0:
@@ -120,19 +123,74 @@ def create_app() -> Dash:
             years_to_fire_str = "Insufficient growth data"
 
         return [
-            create_fire_config_row(),
+            create_fire_config_row(fire_goal=float(fire_goal_decimal)),
             create_fire_metrics_row(
-                fire_number=fire_number,
+                fire_number=fire_goal_decimal,
                 runway_years=runway_years,
                 fire_date_str=fire_date_str,
                 years_to_fire_str=years_to_fire_str,
-                withdrawal_rate=float(wr) * 100,
             ),
             html.Div(
                 style=STYLES["chart_container"],
-                children=[create_fire_projection_chart(_current_data, wr, lb)],
+                children=[create_fire_projection_chart(_current_data, fire_goal_decimal, lb)],
             ),
         ]
+
+    @callback(
+        Output("summary-fire-progress-card", "children"),
+        Output("summary-fire-date-card", "children"),
+        Input("fire-goal", "value"),
+        prevent_initial_call=True,
+    )
+    def update_summary_fire_cards(fire_goal: float | None):
+        global _current_data
+
+        if _current_data is None:
+            return no_update, no_update
+
+        from personal_finance.components.cards import fire_date_card, fire_progress_card
+        from personal_finance.transforms import (
+            get_current_networth,
+            get_fire_number,
+            get_fire_progress_pct,
+            get_projected_fire_date,
+        )
+
+        # Use provided fire_goal or calculate default from spending
+        if fire_goal is not None and fire_goal > 0:
+            fire_goal_decimal = Decimal(str(fire_goal))
+        else:
+            fire_goal_decimal = get_fire_number(_current_data, Decimal("0.04"))
+
+        current_networth = get_current_networth(_current_data)
+        fire_progress = get_fire_progress_pct(_current_data, fire_goal_decimal)
+        fire_projection = get_projected_fire_date(_current_data, fire_goal=fire_goal_decimal, lookback_years=3)
+
+        # Format FIRE date
+        if fire_projection.years_to_fire is not None and fire_projection.years_to_fire == 0:
+            fire_date_str = "FIRE Ready"
+            years_str = "Target reached!"
+        elif fire_projection.fire_date is not None:
+            fire_date_str = fire_projection.fire_date.strftime("%b %Y")
+            years_str = f"{float(fire_projection.years_to_fire):.1f} years at current pace"
+        else:
+            fire_date_str = "N/A"
+            years_str = "Insufficient data"
+
+        progress_card = fire_progress_card(
+            label="FIRE Progress",
+            progress_pct=float(fire_progress),
+            current_value=float(current_networth),
+            target_value=float(fire_goal_decimal),
+        )
+
+        date_card = fire_date_card(
+            label="Projected FIRE Date",
+            fire_date_str=fire_date_str,
+            years_remaining_str=years_str,
+        )
+
+        return progress_card, date_card
 
     return app
 
