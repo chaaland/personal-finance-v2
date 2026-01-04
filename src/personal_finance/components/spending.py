@@ -42,7 +42,7 @@ def create_spending_chart(data: FinanceData) -> go.Figure:
             name="4-Month Median",
             line={"color": COLORS["chart_1"], "width": 2.5},
             fill="tozeroy",
-            fillcolor="rgba(180, 83, 9, 0.08)",
+            fillcolor="rgba(212, 168, 83, 0.12)",  # Gold fill for dark mode
         )
     )
 

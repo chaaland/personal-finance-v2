@@ -1,10 +1,11 @@
 """Refined Swiss Banking aesthetic for the dashboard.
 
-Design direction: Luxurious warmth meets brutalist typography.
-- Warm ivory/cream backgrounds with deep charcoal
-- Copper/bronze accents for that "old money" feel
+Design direction: "Midnight Vault" - Dark mode variant
+- Deep charcoal/obsidian backgrounds with warm undertones
+- Burnished gold/champagne accents for luxurious warmth
 - Bold, oversized numbers with serif elegance
-- Generous whitespace and precise geometry
+- Generous negative space and precise geometry
+- Subtle ambient glow for private banking atmosphere
 """
 
 from decimal import Decimal
@@ -13,46 +14,46 @@ from typing import Union
 # Type alias for numeric values that can be Decimal or float
 NumericValue = Union[Decimal, float]
 
-# Google Fonts import URL (add to HTML head or use @import in CSS)
-FONTS_URL = "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@400;500;600&display=swap"
+# Google Fonts import URL - Adding Playfair Display for refined dark mode headers
+FONTS_URL = "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@400;500;600&family=Playfair+Display:wght@400;500;600&display=swap"
 
-# Color palette - Warm ivory with copper accents
+# Color palette - Midnight Vault (Dark Mode)
 COLORS = {
-    # Backgrounds
-    "background": "#F7F5F0",  # Warm ivory
-    "card": "#FFFFFF",  # Pure white cards
-    "card_elevated": "#FFFEF9",  # Slightly warm white
-    # Text
-    "text_primary": "#1C1917",  # Deep charcoal (stone-900)
-    "text_secondary": "#78716C",  # Warm gray (stone-500)
-    "text_muted": "#A8A29E",  # Lighter warm gray
-    # Accents
-    "accent": "#B45309",  # Copper/amber
-    "accent_light": "#D97706",  # Lighter copper
-    "accent_glow": "rgba(180, 83, 9, 0.1)",  # Copper glow
-    # Semantic
-    "positive": "#166534",  # Deep forest green
-    "positive_bg": "rgba(22, 101, 52, 0.08)",
-    "negative": "#991B1B",  # Deep burgundy red
-    "negative_bg": "rgba(153, 27, 27, 0.08)",
-    # Charts - Earthy, sophisticated palette
-    "chart_1": "#B45309",  # Copper
-    "chart_2": "#1E3A5F",  # Navy
-    "chart_3": "#166534",  # Forest
-    "chart_4": "#7C2D12",  # Burnt sienna
-    # Borders and lines
-    "border": "#E7E5E4",  # Warm gray border
-    "border_strong": "#D6D3D1",
-    "divider": "#F5F5F4",
+    # Backgrounds - Deep obsidian with warm undertones
+    "background": "#0D0D0F",  # Near-black with slight warmth
+    "card": "#18181B",  # Elevated dark surface (zinc-900)
+    "card_elevated": "#1F1F23",  # Hover/elevated state
+    # Text - High contrast with warm whites
+    "text_primary": "#FAFAF9",  # Warm white (stone-50)
+    "text_secondary": "#A8A29E",  # Warm gray (stone-400)
+    "text_muted": "#78716C",  # Dimmed warm gray (stone-500)
+    # Accents - Burnished gold/champagne
+    "accent": "#D4A853",  # Burnished gold
+    "accent_light": "#E5C06E",  # Lighter champagne
+    "accent_glow": "rgba(212, 168, 83, 0.15)",  # Gold ambient glow
+    # Semantic - Jewel tones for dark backgrounds
+    "positive": "#4ADE80",  # Emerald green (more luminous for dark bg)
+    "positive_bg": "rgba(74, 222, 128, 0.12)",
+    "negative": "#F87171",  # Coral red (softer for dark bg)
+    "negative_bg": "rgba(248, 113, 113, 0.12)",
+    # Charts - Luminous jewel palette against dark canvas
+    "chart_1": "#D4A853",  # Burnished gold
+    "chart_2": "#60A5FA",  # Sapphire blue
+    "chart_3": "#4ADE80",  # Emerald green
+    "chart_4": "#FB923C",  # Amber orange
+    # Borders and lines - Subtle dark borders
+    "border": "#27272A",  # Zinc-800
+    "border_strong": "#3F3F46",  # Zinc-700
+    "divider": "#1F1F23",  # Subtle divider
 }
 
-# Typography
+# Typography - Enhanced for dark mode legibility
 FONTS = {
-    "display": "'Cormorant Garamond', Georgia, 'Times New Roman', serif",
+    "display": "'Playfair Display', 'Cormorant Garamond', Georgia, serif",
     "body": "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif",
 }
 
-# Plotly chart template - Refined and minimal
+# Plotly chart template - Dark and refined
 CHART_TEMPLATE = {
     "layout": {
         "paper_bgcolor": COLORS["card"],
@@ -74,14 +75,14 @@ CHART_TEMPLATE = {
         "xaxis": {
             "gridcolor": COLORS["divider"],
             "linecolor": COLORS["border"],
-            "tickfont": {"size": 11},
+            "tickfont": {"size": 11, "color": COLORS["text_muted"]},
             "showgrid": False,
             "zeroline": False,
         },
         "yaxis": {
-            "gridcolor": COLORS["divider"],
+            "gridcolor": COLORS["border"],
             "linecolor": "rgba(0,0,0,0)",
-            "tickfont": {"size": 11},
+            "tickfont": {"size": 11, "color": COLORS["text_muted"]},
             "showgrid": True,
             "gridwidth": 1,
             "zeroline": False,
@@ -97,14 +98,14 @@ CHART_TEMPLATE = {
         },
         "margin": {"t": 60, "r": 24, "b": 48, "l": 60},
         "hoverlabel": {
-            "bgcolor": COLORS["text_primary"],
-            "font": {"color": COLORS["card"], "family": FONTS["body"]},
-            "bordercolor": COLORS["text_primary"],
+            "bgcolor": COLORS["card_elevated"],
+            "font": {"color": COLORS["text_primary"], "family": FONTS["body"]},
+            "bordercolor": COLORS["border_strong"],
         },
     }
 }
 
-# CSS styles
+# CSS styles - Dark mode refinement
 STYLES = {
     "page": {
         "backgroundColor": COLORS["background"],
@@ -112,24 +113,30 @@ STYLES = {
         "padding": "40px 48px",
         "fontFamily": FONTS["body"],
         "color": COLORS["text_primary"],
+        # Subtle radial gradient for depth
+        "backgroundImage": "radial-gradient(ellipse at 50% 0%, rgba(212, 168, 83, 0.03) 0%, transparent 50%)",
     },
     "card": {
         "backgroundColor": COLORS["card"],
-        "borderRadius": "2px",  # Sharp, minimal radius
+        "borderRadius": "3px",
         "padding": "32px",
         "marginBottom": "20px",
         "border": f"1px solid {COLORS['border']}",
-        "boxShadow": "0 1px 3px rgba(28, 25, 23, 0.04)",
+        "boxShadow": "0 4px 24px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3)",
         "position": "relative",
+        # Subtle inner glow on top edge
+        "backgroundImage": f"linear-gradient(180deg, {COLORS['card_elevated']} 0%, {COLORS['card']} 2px)",
     },
     "metric_value": {
         "fontSize": "42px",
-        "fontWeight": "600",
+        "fontWeight": "500",
         "fontFamily": FONTS["display"],
         "color": COLORS["text_primary"],
         "margin": "0",
         "letterSpacing": "-0.02em",
         "lineHeight": "1.1",
+        # Subtle text shadow for depth
+        "textShadow": "0 2px 4px rgba(0, 0, 0, 0.3)",
     },
     "metric_label": {
         "fontSize": "11px",
@@ -138,41 +145,43 @@ STYLES = {
         "color": COLORS["text_muted"],
         "marginBottom": "12px",
         "textTransform": "uppercase",
-        "letterSpacing": "0.1em",
+        "letterSpacing": "0.12em",
     },
     "metric_change_positive": {
         "fontSize": "13px",
         "fontWeight": "500",
         "color": COLORS["positive"],
         "marginTop": "12px",
-        "padding": "6px 10px",
+        "padding": "6px 12px",
         "backgroundColor": COLORS["positive_bg"],
-        "borderRadius": "2px",
+        "borderRadius": "3px",
         "display": "inline-block",
+        "border": f"1px solid rgba(74, 222, 128, 0.2)",
     },
     "metric_change_negative": {
         "fontSize": "13px",
         "fontWeight": "500",
         "color": COLORS["negative"],
         "marginTop": "12px",
-        "padding": "6px 10px",
+        "padding": "6px 12px",
         "backgroundColor": COLORS["negative_bg"],
-        "borderRadius": "2px",
+        "borderRadius": "3px",
         "display": "inline-block",
+        "border": f"1px solid rgba(248, 113, 113, 0.2)",
     },
     "tab": {
         "backgroundColor": "transparent",
         "color": COLORS["text_muted"],
         "border": "none",
-        "borderBottom": f"2px solid transparent",
+        "borderBottom": "2px solid transparent",
         "borderRadius": "0",
         "padding": "16px 24px",
         "fontFamily": FONTS["body"],
         "fontSize": "13px",
         "fontWeight": "500",
         "textTransform": "uppercase",
-        "letterSpacing": "0.08em",
-        "transition": "all 0.2s ease",
+        "letterSpacing": "0.1em",
+        "transition": "all 0.25s ease",
     },
     "tab_selected": {
         "backgroundColor": "transparent",
@@ -185,7 +194,9 @@ STYLES = {
         "fontSize": "13px",
         "fontWeight": "600",
         "textTransform": "uppercase",
-        "letterSpacing": "0.08em",
+        "letterSpacing": "0.1em",
+        # Subtle glow effect on selected tab
+        "textShadow": f"0 0 20px {COLORS['accent_glow']}",
     },
     "header": {
         "display": "flex",
@@ -197,11 +208,16 @@ STYLES = {
     },
     "title": {
         "fontSize": "32px",
-        "fontWeight": "600",
+        "fontWeight": "500",
         "fontFamily": FONTS["display"],
         "color": COLORS["text_primary"],
         "margin": "0",
-        "letterSpacing": "-0.02em",
+        "letterSpacing": "-0.01em",
+        # Subtle gold accent on title
+        "backgroundImage": f"linear-gradient(135deg, {COLORS['text_primary']} 0%, {COLORS['accent_light']} 100%)",
+        "WebkitBackgroundClip": "text",
+        "WebkitTextFillColor": "transparent",
+        "backgroundClip": "text",
     },
     "grid": {
         "display": "grid",
@@ -211,32 +227,35 @@ STYLES = {
     },
     "chart_container": {
         "backgroundColor": COLORS["card"],
-        "borderRadius": "2px",
+        "borderRadius": "3px",
         "padding": "24px",
         "marginBottom": "20px",
         "border": f"1px solid {COLORS['border']}",
-        "boxShadow": "0 1px 3px rgba(28, 25, 23, 0.04)",
+        "boxShadow": "0 4px 24px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3)",
+        # Subtle inner glow
+        "backgroundImage": f"linear-gradient(180deg, {COLORS['card_elevated']} 0%, {COLORS['card']} 2px)",
     },
-    # New styles for enhanced components
     "upload_button": {
         "padding": "12px 24px",
         "backgroundColor": COLORS["card"],
-        "border": f"1px solid {COLORS['border']}",
-        "borderRadius": "2px",
+        "border": f"1px solid {COLORS['border_strong']}",
+        "borderRadius": "3px",
         "cursor": "pointer",
         "color": COLORS["text_secondary"],
         "fontFamily": FONTS["body"],
         "fontSize": "13px",
         "fontWeight": "500",
         "letterSpacing": "0.02em",
-        "transition": "all 0.2s ease",
+        "transition": "all 0.25s ease",
+        "boxShadow": "0 2px 8px rgba(0, 0, 0, 0.3)",
     },
     "empty_state": {
         "textAlign": "center",
         "padding": "80px 40px",
         "backgroundColor": COLORS["card"],
         "border": f"1px solid {COLORS['border']}",
-        "borderRadius": "2px",
+        "borderRadius": "3px",
+        "boxShadow": "0 4px 24px rgba(0, 0, 0, 0.4)",
     },
     "tabs_container": {
         "borderBottom": f"1px solid {COLORS['border']}",
