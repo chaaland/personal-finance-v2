@@ -1,0 +1,8 @@
+- use the python interpreter located in `.venv/bin`, never the system python
+- use `black` with line length 120 to format the code
+- use `isort` to sort imports
+- variables which are dataframes should always be suffixed with `_df` for clarity
+- use the `pl.Decimal` type for currency calculation
+- if a polars column expression is used several times in a file, declare it as a variable either in the function or at the top of the file (e.g. `dates_col = pl.col("Dates")`). Always suffix the variable with `_col`
+- put comments when explaining anything particularly subtle or non-obvious but use them sparingly
+- always create a branch off of main in git for each new feature of the form `feature/feature-name`
