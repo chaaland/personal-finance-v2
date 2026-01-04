@@ -3,7 +3,6 @@
 import dash_bootstrap_components as dbc
 from dash import dcc, html
 
-from personal_finance.components.fire import create_fire_tab
 from personal_finance.components.income import create_income_tab
 from personal_finance.components.networth import create_networth_tab
 from personal_finance.components.spending import create_spending_tab
@@ -81,16 +80,6 @@ def create_tabs(data: FinanceData) -> html.Div:
                         children=html.Div(
                             style={"paddingTop": "32px"},
                             children=create_spending_tab(data),
-                        ),
-                    ),
-                    dcc.Tab(
-                        label="FIRE",
-                        value="fire",
-                        style=STYLES["tab"],
-                        selected_style=STYLES["tab_selected"],
-                        children=html.Div(
-                            style={"paddingTop": "32px"},
-                            children=create_fire_tab(data),
                         ),
                     ),
                 ],

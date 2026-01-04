@@ -8,6 +8,8 @@ from personal_finance.data.loader import FinanceData
 from personal_finance.theme import CHART_TEMPLATE, COLORS, STYLES
 from personal_finance.transforms import (
     get_income_by_year,
+    get_yoy_income_comparison,
+    get_yoy_net_income_comparison,
     get_ytd_gross_income,
     get_ytd_net_income,
 )
@@ -55,6 +57,8 @@ def create_income_tab(data: FinanceData) -> html.Div:
     """Create the income tab content."""
     ytd_gross = get_ytd_gross_income(data)
     ytd_net = get_ytd_net_income(data)
+    yoy_gross_diff, yoy_gross_pct = get_yoy_income_comparison(data)
+    yoy_net_diff, yoy_net_pct = get_yoy_net_income_comparison(data)
 
     return html.Div(
         children=[
@@ -65,10 +69,16 @@ def create_income_tab(data: FinanceData) -> html.Div:
                     metric_card(
                         label="Total Comp (YTD)",
                         value=ytd_gross,
+                        change=yoy_gross_pct,
+                        change_is_percentage=True,
+                        change_absolute=yoy_gross_diff,
                     ),
                     metric_card(
                         label="Net Pay (YTD)",
                         value=ytd_net,
+                        change=yoy_net_pct,
+                        change_is_percentage=True,
+                        change_absolute=yoy_net_diff,
                     ),
                 ],
             ),

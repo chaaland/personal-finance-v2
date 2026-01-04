@@ -10,6 +10,7 @@ from personal_finance.transforms import (
     get_monthly_spending_with_median,
     get_projected_annual_spend,
     get_savings_rate_by_year,
+    get_spending_by_year,
     get_yoy_spending_comparison,
 )
 
@@ -47,6 +48,32 @@ def create_spending_chart(data: FinanceData) -> go.Figure:
 
     fig.update_layout(
         title="Monthly Spending",
+        xaxis_title="",
+        yaxis_title="",
+        yaxis_tickprefix="$",
+        template=CHART_TEMPLATE,
+    )
+
+    return fig
+
+
+def create_annual_spending_chart(data: FinanceData) -> go.Figure:
+    """Create annual spending bar chart."""
+    df = get_spending_by_year(data)
+
+    fig = go.Figure(
+        go.Bar(
+            x=df["Year"].to_list(),
+            y=[float(v) for v in df["Total_USD"].to_list()],
+            marker_color=COLORS["chart_1"],
+            text=[f"${v:,.0f}" for v in df["Total_USD"].to_list()],
+            textposition="outside",
+            textfont={"size": 11, "color": COLORS["text_secondary"]},
+        )
+    )
+
+    fig.update_layout(
+        title="Annual Spending",
         xaxis_title="",
         yaxis_title="",
         yaxis_tickprefix="$",
@@ -104,10 +131,15 @@ def create_spending_tab(data: FinanceData) -> html.Div:
                     ),
                 ],
             ),
-            # Spending chart
+            # Monthly spending chart
             html.Div(
                 style=STYLES["chart_container"],
                 children=[dcc.Graph(figure=create_spending_chart(data), config={"displayModeBar": False})],
+            ),
+            # Annual spending chart
+            html.Div(
+                style=STYLES["chart_container"],
+                children=[dcc.Graph(figure=create_annual_spending_chart(data), config={"displayModeBar": False})],
             ),
             # Savings rate chart
             html.Div(

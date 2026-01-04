@@ -1,7 +1,6 @@
 """Dash application entry point."""
 
 import base64
-from decimal import Decimal
 from pathlib import Path
 
 from dash import Dash, Input, Output, State, callback, html, no_update
@@ -74,59 +73,6 @@ def create_app() -> Dash:
                     ),
                 ]
             )
-
-    @callback(
-        Output("fire-tab-content", "children"),
-        Input("fire-lookback-years", "value"),
-        prevent_initial_call=True,
-    )
-    def update_fire_tab(lookback_years: int | None):
-        global _current_data
-
-        if _current_data is None:
-            return no_update
-
-        from personal_finance.components.fire import (
-            FIRE_GOAL,
-            create_fire_config_row,
-            create_fire_metrics_row,
-            create_fire_projection_chart,
-        )
-        from personal_finance.theme import STYLES
-        from personal_finance.transforms import (
-            get_current_runway_years,
-            get_projected_fire_date,
-        )
-
-        lb = int(lookback_years) if lookback_years else 3
-
-        runway_years = get_current_runway_years(_current_data)
-        projection = get_projected_fire_date(_current_data, fire_goal=FIRE_GOAL, lookback_years=lb)
-
-        # Format FIRE date
-        if projection.years_to_fire is not None and projection.years_to_fire == 0:
-            fire_date_str = "FIRE Ready"
-            years_to_fire_str = "You've reached your target!"
-        elif projection.fire_date is not None:
-            fire_date_str = projection.fire_date.strftime("%b %Y")
-            years_to_fire_str = f"{float(projection.years_to_fire):.1f} years from now"
-        else:
-            fire_date_str = "N/A"
-            years_to_fire_str = "Insufficient growth data"
-
-        return [
-            create_fire_config_row(),
-            create_fire_metrics_row(
-                fire_number=FIRE_GOAL,
-                runway_years=runway_years,
-                fire_date_str=fire_date_str,
-                years_to_fire_str=years_to_fire_str,
-            ),
-            html.Div(
-                style=STYLES["chart_container"],
-                children=[create_fire_projection_chart(_current_data, FIRE_GOAL, lb)],
-            ),
-        ]
 
     @callback(
         Output("networth-card-collapse", "is_open"),
@@ -205,6 +151,29 @@ def create_app() -> Dash:
         prevent_initial_call=True,
     )
     def toggle_savings_collapse(n_clicks: int | None, is_open: bool):
+        if n_clicks is None:
+            return no_update, no_update
+
+        from personal_finance.theme import COLORS
+
+        new_is_open = not is_open
+        chevron_style = {
+            "fontSize": "12px",
+            "color": COLORS["text_muted"],
+            "transition": "transform 0.2s",
+            "marginTop": "4px",
+            "transform": "rotate(180deg)" if new_is_open else "rotate(0deg)",
+        }
+        return new_is_open, chevron_style
+
+    @callback(
+        Output("fire-progress-card-collapse", "is_open"),
+        Output("fire-progress-card-chevron", "style"),
+        Input("fire-progress-card-header", "n_clicks"),
+        State("fire-progress-card-collapse", "is_open"),
+        prevent_initial_call=True,
+    )
+    def toggle_fire_progress_collapse(n_clicks: int | None, is_open: bool):
         if n_clicks is None:
             return no_update, no_update
 

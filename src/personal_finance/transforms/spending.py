@@ -108,6 +108,22 @@ def get_previous_year_spending(data: FinanceData) -> Decimal:
     return prev_year_data.select(pl.col("Total_USD").sum()).row(0)[0] or Decimal("0")
 
 
+def get_spending_by_year(data: FinanceData) -> pl.DataFrame:
+    """Get total spending per year in USD.
+
+    Returns DataFrame with columns: Year, Total_USD
+    """
+    combined_df = get_combined_spending(data)
+
+    yearly_df = (
+        combined_df.with_columns(pl.col("Dates").dt.year().alias("Year"))
+        .group_by("Year")
+        .agg(pl.col("Total_USD").sum().alias("Total_USD"))
+    )
+
+    return yearly_df.sort("Year")
+
+
 def get_yoy_spending_comparison(data: FinanceData) -> tuple[Decimal, Decimal]:
     """Compare projected current year spend to previous year.
 

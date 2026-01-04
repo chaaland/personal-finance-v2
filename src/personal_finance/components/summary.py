@@ -8,6 +8,7 @@ from personal_finance.data.loader import FinanceData
 from personal_finance.theme import STYLES
 from personal_finance.transforms import (
     get_current_networth,
+    get_current_runway_years,
     get_current_year_savings_rate,
     get_fire_progress_pct,
     get_projected_annual_spend,
@@ -41,6 +42,7 @@ def create_summary_tab(data: FinanceData) -> html.Div:
     # FIRE metrics
     fire_progress = get_fire_progress_pct(data, FIRE_GOAL)
     fire_projection = get_projected_fire_date(data, fire_goal=FIRE_GOAL, lookback_years=3)
+    runway_years = get_current_runway_years(data)
 
     # Format FIRE date
     if fire_projection.years_to_fire is not None and fire_projection.years_to_fire == 0:
@@ -93,14 +95,14 @@ def create_summary_tab(data: FinanceData) -> html.Div:
                 change_is_percentage=True,
                 value_is_percentage=True,
             ),
-            html.Div(
-                id="summary-fire-progress-card",
-                children=fire_progress_card(
-                    label="FIRE Progress",
-                    progress_pct=float(fire_progress),
-                    current_value=float(current_networth),
-                    target_value=float(FIRE_GOAL),
-                ),
+            fire_progress_card(
+                card_id="fire-progress-card",
+                label="FIRE Progress",
+                progress_pct=float(fire_progress),
+                current_value=float(current_networth),
+                target_value=float(FIRE_GOAL),
+                runway_years=float(runway_years),
+                projected_spend=float(projected_spend),
             ),
             html.Div(
                 id="summary-fire-date-card",

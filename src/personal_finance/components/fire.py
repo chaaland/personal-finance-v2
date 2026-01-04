@@ -250,9 +250,5 @@ def create_fire_tab(data: FinanceData) -> html.Div:
                 fire_date_str=fire_date_str,
                 years_to_fire_str=years_to_fire_str,
             ),
-            html.Div(
-                style=STYLES["chart_container"],
-                children=[create_fire_projection_chart(data, FIRE_GOAL, lookback_years)],
-            ),
         ],
     )

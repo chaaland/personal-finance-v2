@@ -59,39 +59,90 @@ def metric_card(
 
 
 def fire_progress_card(
+    card_id: str,
     label: str,
     progress_pct: float,
     current_value: float,
     target_value: float,
+    runway_years: float,
+    projected_spend: float,
 ) -> html.Div:
-    """Create a FIRE progress card showing percentage and values.
+    """Create an expandable FIRE progress card showing percentage and values.
 
     Args:
+        card_id: Unique ID for the card (used for collapse toggle)
         label: Card title/label
         progress_pct: Percentage progress (e.g., 42.5)
         current_value: Current net worth
         target_value: FIRE number
+        runway_years: Current runway in years
+        projected_spend: Projected annual spend
 
     Returns:
-        Dash HTML component for the card
+        Dash HTML component for the expandable card
     """
     card_style = {
         **STYLES["card"],
         "borderTop": f"3px solid {COLORS['accent']}",
+        "padding": "0",
     }
+
+    header_style = {
+        "padding": "20px 24px",
+        "cursor": "pointer",
+        "display": "flex",
+        "justifyContent": "space-between",
+        "alignItems": "flex-start",
+    }
+
+    subtext_style = {
+        "fontSize": "13px",
+        "color": COLORS["text_secondary"],
+        "marginTop": "8px",
+    }
+
+    content_children = [
+        html.P(label, style=STYLES["metric_label"]),
+        html.P(f"{progress_pct:.0f}%", style=STYLES["metric_value"]),
+        html.P(
+            f"{format_currency(current_value)} / {format_currency(target_value)}",
+            style=subtext_style,
+        ),
+    ]
+
+    chevron_style = {
+        "fontSize": "12px",
+        "color": COLORS["text_muted"],
+        "transition": "transform 0.2s",
+        "marginTop": "4px",
+    }
+
+    detail_style = {
+        "padding": "0 24px 20px 24px",
+        "fontSize": "13px",
+        "color": COLORS["text_secondary"],
+        "lineHeight": "1.5",
+        "borderTop": f"1px solid {COLORS['border']}",
+        "paddingTop": "16px",
+    }
+
+    runway_text = f"{runway_years:.1f} years runway at {format_currency(projected_spend)}/yr spend"
 
     return html.Div(
         style=card_style,
         children=[
-            html.P(label, style=STYLES["metric_label"]),
-            html.P(f"{progress_pct:.0f}%", style=STYLES["metric_value"]),
-            html.P(
-                f"{format_currency(current_value)} / {format_currency(target_value)}",
-                style={
-                    "fontSize": "13px",
-                    "color": COLORS["text_secondary"],
-                    "marginTop": "8px",
-                },
+            html.Div(
+                id=f"{card_id}-header",
+                style=header_style,
+                children=[
+                    html.Div(children=content_children),
+                    html.Span("▼", id=f"{card_id}-chevron", style=chevron_style),
+                ],
+            ),
+            dbc.Collapse(
+                id=f"{card_id}-collapse",
+                is_open=False,
+                children=html.Div(runway_text, style=detail_style),
             ),
         ],
     )
