@@ -84,23 +84,23 @@ def get_annual_nw_growth(data: FinanceData, lookback_years: int = 3) -> Decimal:
     Returns:
         Average annual growth in USD
     """
-    combined = get_combined_networth(data)
-    if combined.is_empty():
+    combined_df = get_combined_networth(data)
+    if combined_df.is_empty():
         return Decimal("0")
 
-    most_recent_date = combined.select("Dates").row(-1)[0]
+    most_recent_date = combined_df.select("Dates").row(-1)[0]
     cutoff_date = most_recent_date.replace(year=most_recent_date.year - lookback_years)
 
     # Filter to lookback period
-    period_data = combined.filter(pl.col("Dates") >= cutoff_date).sort("Dates")
+    period_df = combined_df.filter(pl.col("Dates") >= cutoff_date).sort("Dates")
 
-    if len(period_data) < 2:
+    if len(period_df) < 2:
         return Decimal("0")
 
-    start_value = period_data.select("Total_USD").row(0)[0]
-    end_value = period_data.select("Total_USD").row(-1)[0]
-    start_date = period_data.select("Dates").row(0)[0]
-    end_date = period_data.select("Dates").row(-1)[0]
+    start_value = period_df.select("Total_USD").row(0)[0]
+    end_value = period_df.select("Total_USD").row(-1)[0]
+    start_date = period_df.select("Dates").row(0)[0]
+    end_date = period_df.select("Dates").row(-1)[0]
 
     # Calculate actual years elapsed
     days_elapsed = (end_date - start_date).days
@@ -146,8 +146,8 @@ def get_projected_fire_date(
     years_to_fire = gap / annual_growth
 
     # Get most recent date and add years
-    combined = get_combined_networth(data)
-    most_recent_date = combined.select("Dates").row(-1)[0]
+    combined_df = get_combined_networth(data)
+    most_recent_date = combined_df.select("Dates").row(-1)[0]
 
     # Calculate projected date
     days_to_add = int(float(years_to_fire) * 365.25)
@@ -178,17 +178,17 @@ def get_fire_projection_series(
     """
     from personal_finance.data.loader import CURRENCY_DTYPE
 
-    historical = get_combined_networth(data).select("Dates", "Total_USD")
+    historical_df = get_combined_networth(data).select("Dates", "Total_USD")
     fire_number = fire_goal
     annual_growth = get_annual_nw_growth(data, lookback_years)
 
-    if historical.is_empty():
+    if historical_df.is_empty():
         empty_df = pl.DataFrame({"Dates": [], "Total_USD": []})
         return empty_df, empty_df, fire_number
 
     # Get current values
-    most_recent_date = historical.select("Dates").row(-1)[0]
-    current_nw = historical.select("Total_USD").row(-1)[0]
+    most_recent_date = historical_df.select("Dates").row(-1)[0]
+    current_nw = historical_df.select("Total_USD").row(-1)[0]
 
     # Create projection points (monthly for smooth line)
     months_to_project = projection_years * 12
@@ -209,4 +209,4 @@ def get_fire_projection_series(
         }
     ).with_columns(pl.col("Total_USD").cast(CURRENCY_DTYPE))
 
-    return historical, projection_df, fire_number
+    return historical_df, projection_df, fire_number

@@ -17,15 +17,15 @@ def get_annual_spending(data: FinanceData) -> pl.DataFrame:
 
     Returns DataFrame with columns: Year, Spend_USD
     """
-    combined = get_combined_spending(data)
+    combined_df = get_combined_spending(data)
 
-    yearly = (
-        combined.with_columns(pl.col("Dates").dt.year().alias("Year"))
+    yearly_df = (
+        combined_df.with_columns(pl.col("Dates").dt.year().alias("Year"))
         .group_by("Year")
         .agg(pl.col("Total_USD").sum().alias("Spend_USD"))
     )
 
-    return yearly.sort("Year")
+    return yearly_df.sort("Year")
 
 
 def get_savings_rate_by_year(data: FinanceData) -> pl.DataFrame:
@@ -35,20 +35,20 @@ def get_savings_rate_by_year(data: FinanceData) -> pl.DataFrame:
 
     Returns DataFrame with columns: Year, Savings_Rate
     """
-    take_home = get_take_home_by_year(data)
-    spending = get_annual_spending(data)
+    take_home_df = get_take_home_by_year(data)
+    spending_df = get_annual_spending(data)
 
     # Join on year
-    combined = take_home.join(spending, on="Year", how="left").with_columns(
+    combined_df = take_home_df.join(spending_df, on="Year", how="left").with_columns(
         pl.col("Spend_USD").fill_null(pl.lit(Decimal("0")).cast(CURRENCY_DTYPE))
     )
 
     # Calculate savings rate
-    combined = combined.with_columns(
+    combined_df = combined_df.with_columns(
         ((pl.col("Take_Home_USD") - pl.col("Spend_USD")) / pl.col("Take_Home_USD") * 100).alias("Savings_Rate")
     )
 
-    return combined.select("Year", "Savings_Rate").sort("Year")
+    return combined_df.select("Year", "Savings_Rate").sort("Year")
 
 
 def get_current_year_savings_rate(data: FinanceData) -> Decimal:
@@ -57,17 +57,17 @@ def get_current_year_savings_rate(data: FinanceData) -> Decimal:
     Uses the most recent date in the data as the "current" date.
     """
     # Use the most recent date in the spending data as "current"
-    combined = get_combined_spending(data)
-    most_recent_date = combined.select("Dates").row(-1)[0]
+    combined_df = get_combined_spending(data)
+    most_recent_date = combined_df.select("Dates").row(-1)[0]
     current_year = most_recent_date.year
 
-    rates = get_savings_rate_by_year(data)
-    current = rates.filter(pl.col("Year") == current_year)
+    rates_df = get_savings_rate_by_year(data)
+    current_df = rates_df.filter(pl.col("Year") == current_year)
 
-    if current.is_empty():
+    if current_df.is_empty():
         return Decimal("0")
 
-    return current.select("Savings_Rate").row(0)[0] or Decimal("0")
+    return current_df.select("Savings_Rate").row(0)[0] or Decimal("0")
 
 
 class SavingsRateDetails:
@@ -104,11 +104,11 @@ def get_savings_rate_details(data: FinanceData) -> SavingsRateDetails:
 
     rates_df = get_savings_rate_by_year(data)
 
-    current_row = rates_df.filter(pl.col("Year") == current_year)
-    previous_row = rates_df.filter(pl.col("Year") == current_year - 1)
+    current_row_df = rates_df.filter(pl.col("Year") == current_year)
+    previous_row_df = rates_df.filter(pl.col("Year") == current_year - 1)
 
-    current_rate = current_row.select("Savings_Rate").row(0)[0] if not current_row.is_empty() else Decimal("0")
-    previous_rate = previous_row.select("Savings_Rate").row(0)[0] if not previous_row.is_empty() else Decimal("0")
+    current_rate = current_row_df.select("Savings_Rate").row(0)[0] if not current_row_df.is_empty() else Decimal("0")
+    previous_rate = previous_row_df.select("Savings_Rate").row(0)[0] if not previous_row_df.is_empty() else Decimal("0")
 
     change = current_rate - previous_rate
 

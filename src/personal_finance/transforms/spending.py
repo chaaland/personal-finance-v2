@@ -16,20 +16,20 @@ def get_combined_spending(data: FinanceData) -> pl.DataFrame:
 
     Returns DataFrame with columns: Dates, Total_USD
     """
-    us = data.us_spend.select(
+    us_df = data.us_spend.select(
         pl.col("Dates"),
         (pl.col("Total") * pl.col("Conversion")).alias("USD"),
     )
 
-    uk = data.uk_spend.select(
+    uk_df = data.uk_spend.select(
         pl.col("Dates"),
         (pl.col("Total") * pl.col("Conversion")).alias("USD"),
     )
 
     # Concatenate and aggregate by date
-    combined = pl.concat([us, uk]).group_by("Dates").agg(pl.col("USD").sum().alias("Total_USD"))
+    combined_df = pl.concat([us_df, uk_df]).group_by("Dates").agg(pl.col("USD").sum().alias("Total_USD"))
 
-    return combined.sort("Dates")
+    return combined_df.sort("Dates")
 
 
 def get_monthly_spending(data: FinanceData) -> pl.DataFrame:
@@ -46,16 +46,16 @@ def get_monthly_spending_with_median(data: FinanceData, window_days: int = 120) 
 
     Returns DataFrame with columns: Dates, Total_USD, Median_USD
     """
-    df = get_combined_spending(data)
+    spending_df = get_combined_spending(data)
 
     # Use rolling_median with time-based window
-    df = df.with_columns(
+    spending_df = spending_df.with_columns(
         pl.col("Total_USD")
         .rolling_median_by("Dates", window_size=timedelta(days=window_days), closed="both")
         .alias("Median_USD")
     )
 
-    return df
+    return spending_df
 
 
 def get_ytd_spending(data: FinanceData) -> Decimal:
@@ -63,14 +63,14 @@ def get_ytd_spending(data: FinanceData) -> Decimal:
 
     Uses the most recent date in the data as the "current" date.
     """
-    combined = get_combined_spending(data)
+    combined_df = get_combined_spending(data)
 
     # Use the most recent date in the data as "current"
-    most_recent_date = combined.select("Dates").row(-1)[0]
+    most_recent_date = combined_df.select("Dates").row(-1)[0]
     current_year = most_recent_date.year
 
-    ytd = combined.filter(pl.col("Dates").dt.year() == current_year)
-    return ytd.select(pl.col("Total_USD").sum()).row(0)[0] or Decimal("0")
+    ytd_df = combined_df.filter(pl.col("Dates").dt.year() == current_year)
+    return ytd_df.select(pl.col("Total_USD").sum()).row(0)[0] or Decimal("0")
 
 
 def get_projected_annual_spend(data: FinanceData) -> Decimal:
@@ -79,10 +79,10 @@ def get_projected_annual_spend(data: FinanceData) -> Decimal:
     Uses the most recent date in the data as the "current" date.
     Formula: (YTD spend) * (12 / months_elapsed)
     """
-    combined = get_combined_spending(data)
+    combined_df = get_combined_spending(data)
 
     # Use the most recent date in the data as "current"
-    most_recent_date = combined.select("Dates").row(-1)[0]
+    most_recent_date = combined_df.select("Dates").row(-1)[0]
     months_elapsed = most_recent_date.month
 
     ytd_spend = get_ytd_spending(data)
@@ -98,14 +98,14 @@ def get_previous_year_spending(data: FinanceData) -> Decimal:
 
     Uses the most recent date in the data as the "current" date.
     """
-    combined = get_combined_spending(data)
+    combined_df = get_combined_spending(data)
 
     # Use the most recent date in the data as "current"
-    most_recent_date = combined.select("Dates").row(-1)[0]
+    most_recent_date = combined_df.select("Dates").row(-1)[0]
     previous_year = most_recent_date.year - 1
 
-    prev_year_data = combined.filter(pl.col("Dates").dt.year() == previous_year)
-    return prev_year_data.select(pl.col("Total_USD").sum()).row(0)[0] or Decimal("0")
+    prev_year_df = combined_df.filter(pl.col("Dates").dt.year() == previous_year)
+    return prev_year_df.select(pl.col("Total_USD").sum()).row(0)[0] or Decimal("0")
 
 
 def get_spending_by_year(data: FinanceData) -> pl.DataFrame:

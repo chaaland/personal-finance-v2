@@ -15,18 +15,18 @@ def get_income_by_year(data: FinanceData) -> pl.DataFrame:
 
     Returns DataFrame with columns: Year, Gross_USD, Net_USD
     """
-    comp = data.total_comp.with_columns(
+    comp_df = data.total_comp.with_columns(
         pl.col("Dates").dt.year().alias("Year"),
         (pl.col("Gross") * pl.col("Conversion")).alias("Gross_USD"),
         (pl.col("Net") * pl.col("Conversion")).alias("Net_USD"),
     )
 
-    yearly = comp.group_by("Year").agg(
+    yearly_df = comp_df.group_by("Year").agg(
         pl.col("Gross_USD").sum().alias("Gross_USD"),
         pl.col("Net_USD").sum().alias("Net_USD"),
     )
 
-    return yearly.sort("Year")
+    return yearly_df.sort("Year")
 
 
 def get_ytd_gross_income(data: FinanceData) -> Decimal:
@@ -38,12 +38,12 @@ def get_ytd_gross_income(data: FinanceData) -> Decimal:
     most_recent_date = data.total_comp.select("Dates").sort("Dates").row(-1)[0]
     current_year = most_recent_date.year
 
-    ytd = data.total_comp.filter(pl.col("Dates").dt.year() == current_year)
+    ytd_df = data.total_comp.filter(pl.col("Dates").dt.year() == current_year)
 
-    if ytd.is_empty():
+    if ytd_df.is_empty():
         return Decimal("0")
 
-    return ytd.select((pl.col("Gross") * pl.col("Conversion")).sum()).row(0)[0] or Decimal("0")
+    return ytd_df.select((pl.col("Gross") * pl.col("Conversion")).sum()).row(0)[0] or Decimal("0")
 
 
 def get_ytd_net_income(data: FinanceData) -> Decimal:
@@ -55,12 +55,12 @@ def get_ytd_net_income(data: FinanceData) -> Decimal:
     most_recent_date = data.total_comp.select("Dates").sort("Dates").row(-1)[0]
     current_year = most_recent_date.year
 
-    ytd = data.total_comp.filter(pl.col("Dates").dt.year() == current_year)
+    ytd_df = data.total_comp.filter(pl.col("Dates").dt.year() == current_year)
 
-    if ytd.is_empty():
+    if ytd_df.is_empty():
         return Decimal("0")
 
-    return ytd.select((pl.col("Net") * pl.col("Conversion")).sum()).row(0)[0] or Decimal("0")
+    return ytd_df.select((pl.col("Net") * pl.col("Conversion")).sum()).row(0)[0] or Decimal("0")
 
 
 def get_yoy_income_comparison(data: FinanceData) -> tuple[Decimal, Decimal]:
@@ -199,11 +199,11 @@ def get_take_home_by_year(data: FinanceData) -> pl.DataFrame:
 
     Returns DataFrame with columns: Year, Take_Home_USD
     """
-    comp = data.total_comp.with_columns(
+    comp_df = data.total_comp.with_columns(
         pl.col("Dates").dt.year().alias("Year"),
         ((pl.col("Net") + pl.col("Pension Contrib")) * pl.col("Conversion")).alias("Take_Home_USD"),
     )
 
-    yearly = comp.group_by("Year").agg(pl.col("Take_Home_USD").sum().alias("Take_Home_USD"))
+    yearly_df = comp_df.group_by("Year").agg(pl.col("Take_Home_USD").sum().alias("Take_Home_USD"))
 
-    return yearly.sort("Year")
+    return yearly_df.sort("Year")
