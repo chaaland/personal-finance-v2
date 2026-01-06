@@ -26,6 +26,7 @@ class FinanceData:
     us_networth: pl.DataFrame
     uk_networth: pl.DataFrame
     total_comp: pl.DataFrame
+    us_asset_allocation: pl.DataFrame
 
 
 def load_excel(file_path: str | Path) -> FinanceData:
@@ -45,34 +46,45 @@ def load_excel(file_path: str | Path) -> FinanceData:
     if not path.exists():
         raise FileNotFoundError(f"File not found: {path}")
 
-    required_sheets = ["US Spend", "UK Spend", "US Networth", "UK Networth", "Total Comp"]
+    required_sheets = ["US Spend", "UK Spend", "US Networth", "UK Networth", "Total Comp", "US Asset Allocation"]
 
     try:
-        us_spend = pl.read_excel(path, sheet_name="US Spend", engine="xlsx2csv")
-        uk_spend = pl.read_excel(path, sheet_name="UK Spend", engine="xlsx2csv")
-        us_networth = pl.read_excel(path, sheet_name="US Networth", engine="xlsx2csv")
-        uk_networth = pl.read_excel(path, sheet_name="UK Networth", engine="xlsx2csv")
-        total_comp = pl.read_excel(path, sheet_name="Total Comp", engine="xlsx2csv")
+        us_spend_df = pl.read_excel(path, sheet_name="US Spend", engine="xlsx2csv")
+        uk_spend_df = pl.read_excel(path, sheet_name="UK Spend", engine="xlsx2csv")
+        us_networth_df = pl.read_excel(path, sheet_name="US Networth", engine="xlsx2csv")
+        uk_networth_df = pl.read_excel(path, sheet_name="UK Networth", engine="xlsx2csv")
+        total_comp_df = pl.read_excel(path, sheet_name="Total Comp", engine="xlsx2csv")
+        us_asset_allocation_df = pl.read_excel(path, sheet_name="US Asset Allocation", engine="xlsx2csv")
     except Exception as e:
         raise ValueError(f"Error reading Excel file. Ensure sheets exist: {required_sheets}. Error: {e}")
 
     # Normalize column names, ensure date column is datetime, cast currency to Decimal
-    us_spend = _normalize_df(us_spend, ["Dates", "Total", "Conversion"], currency_columns=["Total", "Conversion"])
-    uk_spend = _normalize_df(uk_spend, ["Dates", "Total", "Conversion"], currency_columns=["Total", "Conversion"])
-    us_networth = _normalize_df(us_networth, ["Dates", "Net", "Conversion"], currency_columns=["Net", "Conversion"])
-    uk_networth = _normalize_df(uk_networth, ["Dates", "Net", "Conversion"], currency_columns=["Net", "Conversion"])
-    total_comp = _normalize_df(
-        total_comp,
+    us_spend_df = _normalize_df(us_spend_df, ["Dates", "Total", "Conversion"], currency_columns=["Total", "Conversion"])
+    uk_spend_df = _normalize_df(uk_spend_df, ["Dates", "Total", "Conversion"], currency_columns=["Total", "Conversion"])
+    us_networth_df = _normalize_df(
+        us_networth_df, ["Dates", "Net", "Conversion"], currency_columns=["Net", "Conversion"]
+    )
+    uk_networth_df = _normalize_df(
+        uk_networth_df, ["Dates", "Net", "Conversion"], currency_columns=["Net", "Conversion"]
+    )
+    total_comp_df = _normalize_df(
+        total_comp_df,
         ["Dates", "Gross", "Pension Contrib", "Net", "Conversion"],
         currency_columns=["Gross", "Pension Contrib", "Net", "Conversion"],
     )
 
+    # Normalize asset allocation (filter out zero values)
+    us_asset_allocation_df = us_asset_allocation_df.select(["Asset", "Value", "Proportion"]).filter(
+        pl.col("Value") > 0
+    )
+
     return FinanceData(
-        us_spend=us_spend,
-        uk_spend=uk_spend,
-        us_networth=us_networth,
-        uk_networth=uk_networth,
-        total_comp=total_comp,
+        us_spend=us_spend_df,
+        uk_spend=uk_spend_df,
+        us_networth=us_networth_df,
+        uk_networth=uk_networth_df,
+        total_comp=total_comp_df,
+        us_asset_allocation=us_asset_allocation_df,
     )
 
 

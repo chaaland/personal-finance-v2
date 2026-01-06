@@ -17,15 +17,15 @@ from personal_finance.transforms import (
 
 def create_income_chart(data: FinanceData) -> go.Figure:
     """Create grouped bar chart of gross vs net income by year."""
-    df = get_income_by_year(data)
+    income_df = get_income_by_year(data)
 
     fig = go.Figure()
 
     # Gross income bars
     fig.add_trace(
         go.Bar(
-            x=df["Year"].to_list(),
-            y=df["Gross_USD"].to_list(),
+            x=income_df["Year"].to_list(),
+            y=income_df["Gross_USD"].to_list(),
             name="Gross",
             marker_color=COLORS["chart_1"],
         )
@@ -34,8 +34,8 @@ def create_income_chart(data: FinanceData) -> go.Figure:
     # Net income bars
     fig.add_trace(
         go.Bar(
-            x=df["Year"].to_list(),
-            y=df["Net_USD"].to_list(),
+            x=income_df["Year"].to_list(),
+            y=income_df["Net_USD"].to_list(),
             name="Net",
             marker_color=COLORS["chart_2"],
         )

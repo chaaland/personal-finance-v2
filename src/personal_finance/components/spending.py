@@ -17,15 +17,15 @@ from personal_finance.transforms import (
 
 def create_spending_chart(data: FinanceData) -> go.Figure:
     """Create monthly spending line chart with rolling median."""
-    df = get_monthly_spending_with_median(data)
+    spending_df = get_monthly_spending_with_median(data)
 
     fig = go.Figure()
 
     # Raw data as faded/dotted line
     fig.add_trace(
         go.Scatter(
-            x=df["Dates"].to_list(),
-            y=df["Total_USD"].to_list(),
+            x=spending_df["Dates"].to_list(),
+            y=spending_df["Total_USD"].to_list(),
             mode="lines",
             name="Monthly",
             line={"color": COLORS["chart_1"], "width": 1, "dash": "dot"},
@@ -36,8 +36,8 @@ def create_spending_chart(data: FinanceData) -> go.Figure:
     # Rolling median as primary solid line with fill
     fig.add_trace(
         go.Scatter(
-            x=df["Dates"].to_list(),
-            y=df["Median_USD"].to_list(),
+            x=spending_df["Dates"].to_list(),
+            y=spending_df["Median_USD"].to_list(),
             mode="lines",
             name="4-Month Median",
             line={"color": COLORS["chart_1"], "width": 2.5},
@@ -59,14 +59,14 @@ def create_spending_chart(data: FinanceData) -> go.Figure:
 
 def create_annual_spending_chart(data: FinanceData) -> go.Figure:
     """Create annual spending bar chart."""
-    df = get_spending_by_year(data)
+    yearly_df = get_spending_by_year(data)
 
     fig = go.Figure(
         go.Bar(
-            x=df["Year"].to_list(),
-            y=[float(v) for v in df["Total_USD"].to_list()],
+            x=yearly_df["Year"].to_list(),
+            y=[float(v) for v in yearly_df["Total_USD"].to_list()],
             marker_color=COLORS["chart_1"],
-            text=[f"${v:,.0f}" for v in df["Total_USD"].to_list()],
+            text=[f"${v:,.0f}" for v in yearly_df["Total_USD"].to_list()],
             textposition="outside",
             textfont={"size": 11, "color": COLORS["text_secondary"]},
         )
@@ -85,16 +85,16 @@ def create_annual_spending_chart(data: FinanceData) -> go.Figure:
 
 def create_savings_rate_chart(data: FinanceData) -> go.Figure:
     """Create savings rate by year bar chart."""
-    df = get_savings_rate_by_year(data)
+    savings_df = get_savings_rate_by_year(data)
 
-    colors = [COLORS["positive"] if r >= 0 else COLORS["negative"] for r in df["Savings_Rate"].to_list()]
+    colors = [COLORS["positive"] if r >= 0 else COLORS["negative"] for r in savings_df["Savings_Rate"].to_list()]
 
     fig = go.Figure(
         go.Bar(
-            x=df["Year"].to_list(),
-            y=df["Savings_Rate"].to_list(),
+            x=savings_df["Year"].to_list(),
+            y=savings_df["Savings_Rate"].to_list(),
             marker_color=colors,
-            text=[f"{r:.1f}%" for r in df["Savings_Rate"].to_list()],
+            text=[f"{r:.1f}%" for r in savings_df["Savings_Rate"].to_list()],
             textposition="outside",
             textfont={"size": 11, "color": COLORS["text_secondary"]},
         )

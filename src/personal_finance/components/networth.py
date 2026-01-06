@@ -106,16 +106,16 @@ def create_networth_chart(data: FinanceData, lookback_years: int = 3) -> go.Figu
 
 def create_yoy_networth_chart(data: FinanceData) -> go.Figure:
     """Create year-over-year net worth change bar chart."""
-    df = get_yoy_networth_changes(data)
+    yoy_df = get_yoy_networth_changes(data)
 
-    colors = [COLORS["positive"] if c >= 0 else COLORS["negative"] for c in df["Change"].to_list()]
+    colors = [COLORS["positive"] if c >= 0 else COLORS["negative"] for c in yoy_df["Change"].to_list()]
 
     fig = go.Figure(
         go.Bar(
-            x=df["Year"].to_list(),
-            y=df["Change"].to_list(),
+            x=yoy_df["Year"].to_list(),
+            y=yoy_df["Change"].to_list(),
             marker_color=colors,
-            text=[f"${c / 1000:+,.0f}K" for c in df["Change"].to_list()],
+            text=[f"${c / 1000:+,.0f}K" for c in yoy_df["Change"].to_list()],
             textposition="outside",
             textfont={"size": 11, "color": COLORS["text_secondary"]},
         )
@@ -127,6 +127,54 @@ def create_yoy_networth_chart(data: FinanceData) -> go.Figure:
         yaxis_title="",
         yaxis_tickprefix="$",
         template=CHART_TEMPLATE,
+    )
+
+    return fig
+
+
+def create_asset_allocation_chart(data: FinanceData) -> go.Figure:
+    """Create US asset allocation donut chart."""
+    alloc_df = data.us_asset_allocation
+
+    # Sort by value descending for better visual presentation
+    alloc_df = alloc_df.sort("Value", descending=True)
+
+    assets = alloc_df["Asset"].to_list()
+    values = alloc_df["Value"].to_list()
+    proportions = alloc_df["Proportion"].to_list()
+
+    # Color palette for the pie slices
+    chart_colors = [
+        COLORS["chart_1"],  # Gold
+        COLORS["chart_2"],  # Sapphire
+        COLORS["chart_3"],  # Emerald
+        COLORS["chart_4"],  # Amber
+        "#A78BFA",  # Purple
+        "#F472B6",  # Pink
+        "#2DD4BF",  # Teal
+        "#94A3B8",  # Slate
+        "#FBBF24",  # Yellow
+    ]
+
+    fig = go.Figure(
+        go.Pie(
+            labels=assets,
+            values=values,
+            hole=0.55,
+            marker={"colors": chart_colors[: len(assets)]},
+            textinfo="label+percent",
+            textposition="outside",
+            textfont={"size": 11, "color": COLORS["text_secondary"]},
+            hovertemplate="<b>%{label}</b><br>$%{value:,.0f}<br>%{percent}<extra></extra>",
+            pull=[0.02] * len(assets),
+        )
+    )
+
+    fig.update_layout(
+        title="US Asset Allocation",
+        template=CHART_TEMPLATE,
+        showlegend=False,
+        margin={"t": 60, "r": 80, "b": 40, "l": 80},
     )
 
     return fig
@@ -157,10 +205,23 @@ def create_networth_tab(data: FinanceData) -> html.Div:
                 style=STYLES["chart_container"],
                 children=[dcc.Graph(figure=create_networth_chart(data), config={"displayModeBar": False})],
             ),
-            # YoY change chart
+            # Two-column layout for YoY and Asset Allocation
             html.Div(
-                style=STYLES["chart_container"],
-                children=[dcc.Graph(figure=create_yoy_networth_chart(data), config={"displayModeBar": False})],
+                style={**STYLES["grid"], "gridTemplateColumns": "1fr 1fr"},
+                children=[
+                    # YoY change chart
+                    html.Div(
+                        style=STYLES["chart_container"],
+                        children=[dcc.Graph(figure=create_yoy_networth_chart(data), config={"displayModeBar": False})],
+                    ),
+                    # Asset allocation donut chart
+                    html.Div(
+                        style=STYLES["chart_container"],
+                        children=[
+                            dcc.Graph(figure=create_asset_allocation_chart(data), config={"displayModeBar": False})
+                        ],
+                    ),
+                ],
             ),
         ]
     )
