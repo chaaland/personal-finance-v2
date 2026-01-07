@@ -158,7 +158,7 @@ def fire_date_card(
     Args:
         label: Card title/label
         fire_date_str: Formatted date string (e.g., "Oct 2034")
-        years_remaining_str: Subtext (e.g., "8.5 years at current pace")
+        years_remaining_str: Subtext (e.g., "8.5 years at current pace of $150,000/yr")
 
     Returns:
         Dash HTML component for the card

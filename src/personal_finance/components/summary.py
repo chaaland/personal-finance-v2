@@ -5,7 +5,7 @@ from dash import html
 from personal_finance.components.cards import expandable_metric_card, fire_date_card, fire_progress_card
 from personal_finance.components.fire import FIRE_GOAL
 from personal_finance.data.loader import FinanceData
-from personal_finance.theme import STYLES
+from personal_finance.theme import STYLES, format_currency
 from personal_finance.transforms import (
     get_current_networth,
     get_current_runway_years,
@@ -45,12 +45,13 @@ def create_summary_tab(data: FinanceData) -> html.Div:
     runway_years = get_current_runway_years(data)
 
     # Format FIRE date
+    pace_str = format_currency(float(fire_projection.annual_nw_growth))
     if fire_projection.years_to_fire is not None and fire_projection.years_to_fire == 0:
         fire_date_str = "FIRE Ready"
         years_str = "Target reached!"
     elif fire_projection.fire_date is not None:
         fire_date_str = fire_projection.fire_date.strftime("%b %Y")
-        years_str = f"{float(fire_projection.years_to_fire):.1f} years at current pace"
+        years_str = f"{float(fire_projection.years_to_fire):.1f} years at current pace of {pace_str}/yr"
     else:
         fire_date_str = "N/A"
         years_str = "Insufficient data"
