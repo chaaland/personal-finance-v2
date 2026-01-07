@@ -8,6 +8,7 @@ from decimal import Decimal
 from typing import NamedTuple
 
 import polars as pl
+from scipy.optimize import minimize_scalar
 
 from personal_finance.data.loader import FinanceData
 from personal_finance.transforms.networth import get_combined_networth, get_current_networth
@@ -72,17 +73,77 @@ def get_current_runway_years(data: FinanceData) -> Decimal:
     return current_nw / projected_spend
 
 
+def _fit_lad_regression(x_values: list[float], y_values: list[float]) -> tuple[float, float]:
+    """Fit a line using Least Absolute Deviation (LAD) regression.
+
+    LAD minimizes sum of absolute residuals, making it more robust to outliers
+    than ordinary least squares which minimizes squared residuals.
+
+    Args:
+        x_values: Independent variable (time in years)
+        y_values: Dependent variable (net worth)
+
+    Returns:
+        Tuple of (slope, intercept)
+    """
+    n = len(x_values)
+    if n < 2:
+        return 0.0, 0.0
+
+    # For LAD, we need to find slope and intercept that minimize sum(|y - (mx + b)|)
+    # We'll use a two-step approach:
+    # 1. Find optimal slope by minimizing over a range
+    # 2. For each slope, find optimal intercept (median of residuals)
+
+    def objective(slope: float) -> float:
+        """Calculate sum of absolute residuals for a given slope."""
+        # For a given slope, optimal intercept is median of (y - slope*x)
+        residuals = [y - slope * x for x, y in zip(x_values, y_values)]
+        residuals_sorted = sorted(residuals)
+        if n % 2 == 0:
+            intercept = (residuals_sorted[n // 2 - 1] + residuals_sorted[n // 2]) / 2
+        else:
+            intercept = residuals_sorted[n // 2]
+
+        # Calculate sum of absolute residuals
+        return sum(abs(y - (slope * x + intercept)) for x, y in zip(x_values, y_values))
+
+    # Estimate initial bounds for slope using two-point method
+    x_mean = sum(x_values) / n
+    y_mean = sum(y_values) / n
+    numerator = sum((x - x_mean) * (y - y_mean) for x, y in zip(x_values, y_values))
+    denominator = sum((x - x_mean) ** 2 for x in x_values)
+    ols_slope = numerator / denominator if denominator != 0 else 0
+
+    # Search for optimal slope in a range around OLS estimate
+    bracket = (ols_slope - abs(ols_slope) * 2, ols_slope + abs(ols_slope) * 2)
+    result = minimize_scalar(objective, bounds=bracket, method="bounded")
+    optimal_slope = result.x
+
+    # Calculate optimal intercept for the optimal slope
+    residuals = [y - optimal_slope * x for x, y in zip(x_values, y_values)]
+    residuals_sorted = sorted(residuals)
+    if n % 2 == 0:
+        optimal_intercept = (residuals_sorted[n // 2 - 1] + residuals_sorted[n // 2]) / 2
+    else:
+        optimal_intercept = residuals_sorted[n // 2]
+
+    return optimal_slope, optimal_intercept
+
+
 def get_annual_nw_growth(data: FinanceData, lookback_years: int = 3) -> Decimal:
     """Calculate average annual net worth growth over lookback period.
 
-    Uses simple slope calculation: (end_value - start_value) / years_elapsed
+    Uses Least Absolute Deviation (LAD) regression on all data points in the
+    lookback period. LAD is more robust to outliers than ordinary least squares,
+    making it suitable for financial data with market volatility.
 
     Args:
         data: Finance data
         lookback_years: Number of years to look back
 
     Returns:
-        Average annual growth in USD
+        Average annual growth in USD (slope of LAD regression line)
     """
     combined_df = get_combined_networth(data)
     if combined_df.is_empty():
@@ -97,21 +158,25 @@ def get_annual_nw_growth(data: FinanceData, lookback_years: int = 3) -> Decimal:
     if len(period_df) < 2:
         return Decimal("0")
 
-    start_value = period_df.select("Total_USD").row(0)[0]
-    end_value = period_df.select("Total_USD").row(-1)[0]
+    # Get start date for normalization
     start_date = period_df.select("Dates").row(0)[0]
-    end_date = period_df.select("Dates").row(-1)[0]
 
-    # Calculate actual years elapsed
-    days_elapsed = (end_date - start_date).days
-    if days_elapsed == 0:
-        return Decimal("0")
+    # Convert dates to years since start
+    x_values = []
+    y_values = []
+    for row in period_df.iter_rows():
+        date_val = row[0]  # Dates column
+        nw_val = row[1]  # Total_USD column
+        days_elapsed = (date_val - start_date).days
+        years_elapsed = days_elapsed / 365.25
+        x_values.append(years_elapsed)
+        y_values.append(float(nw_val))
 
-    years_elapsed = Decimal(str(days_elapsed)) / Decimal("365.25")
-    if years_elapsed == 0:
-        return Decimal("0")
+    # Fit LAD regression
+    slope, _ = _fit_lad_regression(x_values, y_values)
 
-    return (end_value - start_value) / years_elapsed
+    # Slope is in units of USD per year
+    return Decimal(str(slope))
 
 
 def get_projected_fire_date(
