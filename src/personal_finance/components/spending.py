@@ -68,7 +68,7 @@ def create_annual_spending_chart(data: FinanceData) -> go.Figure:
             marker_color=COLORS["chart_1"],
             text=[f"${v:,.0f}" for v in yearly_df["Total_USD"].to_list()],
             textposition="outside",
-            textfont={"size": 11, "color": COLORS["text_secondary"]},
+            textfont={"size": 14, "color": COLORS["text_secondary"]},
         )
     )
 
@@ -96,15 +96,12 @@ def create_savings_rate_chart(data: FinanceData) -> go.Figure:
             marker_color=colors,
             text=[f"{r:.1f}%" for r in savings_df["Savings_Rate"].to_list()],
             textposition="outside",
-            textfont={"size": 11, "color": COLORS["text_secondary"]},
+            textfont={"size": 14, "color": COLORS["text_secondary"]},
         )
     )
 
     fig.update_layout(
-        title="Savings Rate by Year",
-        xaxis_title="",
-        yaxis_title="",
-        template=CHART_TEMPLATE,
+        title="Savings Rate by Year", xaxis_title="", yaxis_title="", template=CHART_TEMPLATE, yaxis_range=[0, 100]
     )
 
     return fig

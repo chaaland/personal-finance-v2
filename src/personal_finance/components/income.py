@@ -28,6 +28,9 @@ def create_income_chart(data: FinanceData) -> go.Figure:
             y=income_df["Gross_USD"].to_list(),
             name="Gross",
             marker_color=COLORS["chart_1"],
+            text=[f"${v:,.0f}" for v in income_df["Gross_USD"].to_list()],
+            textposition="outside",
+            textfont={"size": 14, "color": COLORS["text_secondary"]},
         )
     )
 
@@ -38,6 +41,9 @@ def create_income_chart(data: FinanceData) -> go.Figure:
             y=income_df["Net_USD"].to_list(),
             name="Net",
             marker_color=COLORS["chart_2"],
+            text=[f"${v:,.0f}" for v in income_df["Net_USD"].to_list()],
+            textposition="outside",
+            textfont={"size": 14, "color": COLORS["text_secondary"]},
         )
     )
 
