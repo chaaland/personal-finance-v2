@@ -14,7 +14,7 @@ from personal_finance.transforms import (
 )
 
 # Hardcoded FIRE goal
-FIRE_GOAL = Decimal("3500000")
+FIRE_GOAL = Decimal("4250000")
 
 
 def create_fire_config_row() -> html.Div:
