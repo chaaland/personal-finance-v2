@@ -275,3 +275,50 @@ def get_fire_projection_series(
     ).with_columns(pl.col("Total_USD").cast(CURRENCY_DTYPE))
 
     return historical_df, projection_df, fire_number
+
+
+def get_swr_sensitivity(
+    data: FinanceData,
+    withdrawal_rates: list[Decimal],
+    lookback_years: int = 3,
+    base_fire_goal: Decimal | None = None,
+    base_swr: Decimal = Decimal("0.04"),
+) -> pl.DataFrame:
+    """Calculate FIRE dates for different safe withdrawal rates.
+
+    Shows how the projected FIRE date changes at different SWR percentages.
+    Lower SWR = larger required nest egg = later FIRE date (more conservative).
+
+    The FIRE goal is scaled relative to a base goal and SWR. For example, if the
+    base goal is $4M at 4% SWR, then at 3% SWR the goal would be $5.33M (4M * 4/3).
+
+    Args:
+        data: Finance data
+        withdrawal_rates: List of withdrawal rates as decimals (e.g., 0.04 for 4%)
+        lookback_years: Years of history to use for growth calculation
+        base_fire_goal: Base FIRE goal to scale from. If None, uses get_fire_number with base_swr.
+        base_swr: The SWR that corresponds to base_fire_goal (default 4%)
+
+    Returns:
+        DataFrame with columns:
+        - SWR: Withdrawal rate as percentage (e.g., 4.0 for 4%)
+        - FireDate: Projected FIRE date (datetime or None)
+        - YearsToFire: Years until FIRE (Decimal or None)
+    """
+    if base_fire_goal is None:
+        base_fire_goal = get_fire_number(data, base_swr)
+
+    results = []
+    for wr in withdrawal_rates:
+        # Scale the FIRE goal: lower SWR = higher goal
+        # FIRE_goal = base_goal * (base_swr / wr)
+        fire_goal = base_fire_goal * (base_swr / wr)
+        projection = get_projected_fire_date(data, fire_goal, lookback_years)
+        results.append(
+            {
+                "SWR": wr * Decimal("100"),
+                "FireDate": projection.fire_date,
+                "YearsToFire": projection.years_to_fire,
+            }
+        )
+    return pl.DataFrame(results)

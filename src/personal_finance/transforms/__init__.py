@@ -8,6 +8,7 @@ from personal_finance.transforms.fire import (
     get_fire_progress_pct,
     get_fire_projection_series,
     get_projected_fire_date,
+    get_swr_sensitivity,
 )
 from personal_finance.transforms.income import (
     IncomeComparisonDetails,
@@ -80,4 +81,5 @@ __all__ = [
     "get_annual_nw_growth",
     "get_projected_fire_date",
     "get_fire_projection_series",
+    "get_swr_sensitivity",
 ]
