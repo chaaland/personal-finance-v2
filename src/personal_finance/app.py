@@ -189,6 +189,29 @@ def create_app() -> Dash:
         }
         return new_is_open, chevron_style
 
+    @callback(
+        Output("fire-date-card-collapse", "is_open"),
+        Output("fire-date-card-chevron", "style"),
+        Input("fire-date-card-header", "n_clicks"),
+        State("fire-date-card-collapse", "is_open"),
+        prevent_initial_call=True,
+    )
+    def toggle_fire_date_collapse(n_clicks: int | None, is_open: bool):
+        if n_clicks is None:
+            return no_update, no_update
+
+        from personal_finance.theme import COLORS
+
+        new_is_open = not is_open
+        chevron_style = {
+            "fontSize": "12px",
+            "color": COLORS["text_muted"],
+            "transition": "transform 0.2s",
+            "marginTop": "4px",
+            "transform": "rotate(180deg)" if new_is_open else "rotate(0deg)",
+        }
+        return new_is_open, chevron_style
+
     return app
 
 

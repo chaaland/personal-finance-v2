@@ -189,13 +189,11 @@ def create_summary_tab(data: FinanceData) -> html.Div:
                         runway_years=float(runway_years),
                         projected_spend=float(projected_spend),
                     ),
-                    html.Div(
-                        id="summary-fire-date-card",
-                        children=fire_date_card(
-                            label="Projected FIRE Date",
-                            fire_date_str=fire_date_str,
-                            years_remaining_str=years_str,
-                        ),
+                    fire_date_card(
+                        card_id="fire-date-card",
+                        label="Projected FIRE Date",
+                        fire_date_str=fire_date_str,
+                        years_remaining_str=years_str,
                     ),
                 ],
             ),

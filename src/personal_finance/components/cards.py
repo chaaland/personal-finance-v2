@@ -149,37 +149,72 @@ def fire_progress_card(
 
 
 def fire_date_card(
+    card_id: str,
     label: str,
     fire_date_str: str,
     years_remaining_str: str,
 ) -> html.Div:
-    """Create a FIRE date card.
+    """Create an expandable FIRE date card.
 
     Args:
+        card_id: Unique ID for the card (used for collapse toggle)
         label: Card title/label
         fire_date_str: Formatted date string (e.g., "Oct 2034")
-        years_remaining_str: Subtext (e.g., "8.5 years at current pace of $150,000/yr")
+        years_remaining_str: Detail text shown when expanded (e.g., "8.5 years at current pace of $150,000/yr")
 
     Returns:
-        Dash HTML component for the card
+        Dash HTML component for the expandable card
     """
     card_style = {
         **STYLES["card"],
         "borderTop": f"3px solid {COLORS['accent']}",
+        "padding": "0",
+    }
+
+    header_style = {
+        "padding": "20px 24px",
+        "cursor": "pointer",
+        "display": "flex",
+        "justifyContent": "space-between",
+        "alignItems": "flex-start",
+    }
+
+    chevron_style = {
+        "fontSize": "12px",
+        "color": COLORS["text_muted"],
+        "transition": "transform 0.2s",
+        "marginTop": "4px",
+    }
+
+    detail_style = {
+        "padding": "0 24px 20px 24px",
+        "fontSize": "13px",
+        "color": COLORS["text_secondary"],
+        "lineHeight": "1.5",
+        "borderTop": f"1px solid {COLORS['border']}",
+        "paddingTop": "16px",
     }
 
     return html.Div(
         style=card_style,
         children=[
-            html.P(label, style=STYLES["metric_label"]),
-            html.P(fire_date_str, style=STYLES["metric_value"]),
-            html.P(
-                years_remaining_str,
-                style={
-                    "fontSize": "13px",
-                    "color": COLORS["text_secondary"],
-                    "marginTop": "8px",
-                },
+            html.Div(
+                id=f"{card_id}-header",
+                style=header_style,
+                children=[
+                    html.Div(
+                        children=[
+                            html.P(label, style=STYLES["metric_label"]),
+                            html.P(fire_date_str, style=STYLES["metric_value"]),
+                        ]
+                    ),
+                    html.Span("▼", id=f"{card_id}-chevron", style=chevron_style),
+                ],
+            ),
+            dbc.Collapse(
+                id=f"{card_id}-collapse",
+                is_open=False,
+                children=html.Div(years_remaining_str, style=detail_style),
             ),
         ],
     )
