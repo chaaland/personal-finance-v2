@@ -30,7 +30,14 @@ def create_app() -> Dash:
     """Create and configure the Dash application."""
     global _current_data
 
-    app = Dash(__name__, suppress_callback_exceptions=True)
+    app = Dash(
+        __name__,
+        suppress_callback_exceptions=True,
+        assets_folder="assets",
+    )
+
+    # Set custom favicon
+    app._favicon = "favicon.svg"
 
     # Try loading default data
     _current_data = load_default_data()

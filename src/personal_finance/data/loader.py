@@ -73,10 +73,10 @@ def load_excel(file_path: str | Path) -> FinanceData:
         currency_columns=["Gross", "Pension Contrib", "Net", "Conversion"],
     )
 
-    # Normalize asset allocation (filter out zero values)
-    us_asset_allocation_df = us_asset_allocation_df.select(["Asset", "Value", "Proportion"]).filter(
-        pl.col("Value") > 0
-    )
+    # Normalize asset allocation (filter out zero values, include Account Type for withdrawal strategy)
+    us_asset_allocation_df = us_asset_allocation_df.select(
+        ["Asset", "Value", "Proportion", "Account Type"]
+    ).filter(pl.col("Value") > 0)
 
     return FinanceData(
         us_spend=us_spend_df,

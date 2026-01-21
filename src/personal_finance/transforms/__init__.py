@@ -1,6 +1,7 @@
 """Data transformation functions."""
 
 from personal_finance.transforms.fire import (
+    WITHDRAWAL_ORDER,
     FireProjection,
     get_annual_nw_growth,
     get_current_runway_years,
@@ -8,6 +9,7 @@ from personal_finance.transforms.fire import (
     get_fire_progress_pct,
     get_fire_projection_series,
     get_projected_fire_date,
+    get_retirement_drawdown_series,
     get_swr_sensitivity,
 )
 from personal_finance.transforms.income import (
@@ -81,5 +83,7 @@ __all__ = [
     "get_annual_nw_growth",
     "get_projected_fire_date",
     "get_fire_projection_series",
+    "get_retirement_drawdown_series",
     "get_swr_sensitivity",
+    "WITHDRAWAL_ORDER",
 ]

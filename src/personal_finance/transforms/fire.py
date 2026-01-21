@@ -277,6 +277,126 @@ def get_fire_projection_series(
     return historical_df, projection_df, fire_number
 
 
+# Tax-optimized withdrawal order: deplete taxable/low-growth first, preserve tax-free longest
+WITHDRAWAL_ORDER = ["HYSA", "Coinbase", "Taxable Brokerage", "401k", "IRA", "HSA", "Roth IRA"]
+
+# Accounts that grow at the investment growth rate (5% default)
+GROWTH_ACCOUNTS = {"Taxable Brokerage", "401k", "IRA", "HSA", "Roth IRA"}
+
+
+def get_retirement_drawdown_series(
+    data: FinanceData,
+    fire_goal: Decimal,
+    withdrawal_rate: Decimal = Decimal("0.04"),
+    growth_rate: Decimal = Decimal("0.05"),
+    inflation_rate: Decimal = Decimal("0.02"),
+    retirement_age: int = 50,
+    end_age: int = 95,
+) -> pl.DataFrame:
+    """Calculate portfolio balance and withdrawals over retirement by account type.
+
+    Uses tax-optimized withdrawal strategy: deplete accounts in priority order
+    (HYSA → Coinbase → Taxable Brokerage → 401k/IRA → HSA → Roth IRA) to minimize
+    taxes and preserve tax-free growth as long as possible.
+
+    Investment accounts (Taxable Brokerage, 401k, IRA, HSA, Roth IRA) grow at the
+    specified growth rate each year. HYSA and Coinbase are assumed to have no growth.
+
+    Withdrawals increase annually by the inflation rate to maintain purchasing power.
+
+    Args:
+        data: Finance data containing asset allocation with Account Type column
+        fire_goal: Target FIRE number (starting balance at retirement)
+        withdrawal_rate: Annual withdrawal rate as decimal (e.g., 0.04 for 4%)
+        growth_rate: Annual investment growth rate as decimal (e.g., 0.07 for 7%)
+        inflation_rate: Annual inflation rate as decimal (e.g., 0.02 for 2%)
+        retirement_age: Age at retirement
+        end_age: Age to project to
+
+    Returns:
+        DataFrame with columns:
+        - Age: Integer age
+        - Year: Retirement year (1-indexed)
+        - One column per account type with remaining balance
+        - Total_Balance: Sum of all account balances
+        - Withdrawal: Amount withdrawn that year
+    """
+    from personal_finance.data.loader import CURRENCY_DTYPE
+
+    # Aggregate balances by account type using polars group_by
+    allocation_df = data.us_asset_allocation
+    grouped = (
+        allocation_df.group_by("Account Type")
+        .agg(pl.col("Value").sum().alias("Total"))
+        .to_dict(as_series=False)
+    )
+
+    # Convert to dict with Decimal values
+    account_balances: dict[str, Decimal] = {
+        account_type: Decimal("0") for account_type in WITHDRAWAL_ORDER
+    }
+    for account_type, total in zip(grouped["Account Type"], grouped["Total"]):
+        if account_type in account_balances:
+            account_balances[account_type] = Decimal(str(total)) if total else Decimal("0")
+
+    # Scale balances to match FIRE goal (current allocation as proportion of target)
+    current_total = sum(account_balances.values())
+    if current_total > 0:
+        scale_factor = fire_goal / current_total
+        for account_type in WITHDRAWAL_ORDER:
+            account_balances[account_type] = account_balances[account_type] * scale_factor
+
+    base_withdrawal = fire_goal * withdrawal_rate
+    growth_multiplier = Decimal("1") + growth_rate
+    inflation_multiplier = Decimal("1") + inflation_rate
+
+    # Build year-by-year projection
+    rows: list[dict] = []
+    for year_num, age in enumerate(range(retirement_age, end_age + 1), start=1):
+        # Apply growth to investment accounts at start of year (before withdrawal)
+        if year_num > 1:  # Don't apply growth in first year (already at FIRE goal)
+            for account_type in GROWTH_ACCOUNTS:
+                account_balances[account_type] = account_balances[account_type] * growth_multiplier
+
+        total_balance = sum(account_balances.values())
+
+        # Record start-of-year balances (after growth, before withdrawal)
+        row: dict = {"Age": age, "Year": year_num}
+        for account_type in WITHDRAWAL_ORDER:
+            row[account_type] = account_balances[account_type]
+        row["Total_Balance"] = total_balance
+
+        # Calculate withdrawal for this year (increases with inflation each year)
+        annual_withdrawal = base_withdrawal * (inflation_multiplier ** (year_num - 1))
+        remaining_to_withdraw = min(annual_withdrawal, total_balance)
+        row["Withdrawal"] = remaining_to_withdraw
+
+        # Deplete accounts in priority order
+        for account_type in WITHDRAWAL_ORDER:
+            if remaining_to_withdraw <= 0:
+                break
+            available = account_balances[account_type]
+            withdraw_from_this = min(available, remaining_to_withdraw)
+            account_balances[account_type] = available - withdraw_from_this
+            remaining_to_withdraw -= withdraw_from_this
+
+        rows.append(row)
+
+    # Convert Decimal values to float for DataFrame creation (avoids Polars overflow with large decimals)
+    for row in rows:
+        for key, value in row.items():
+            if isinstance(value, Decimal):
+                row[key] = float(value)
+
+    # Create DataFrame and cast to Decimal
+    df = pl.DataFrame(rows)
+    currency_cols = WITHDRAWAL_ORDER + ["Total_Balance", "Withdrawal"]
+    for col in currency_cols:
+        df = df.with_columns(pl.col(col).cast(CURRENCY_DTYPE))
+
+    return df
+
+
 def get_swr_sensitivity(
     data: FinanceData,
     withdrawal_rates: list[Decimal],
