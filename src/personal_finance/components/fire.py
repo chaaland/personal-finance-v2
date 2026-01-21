@@ -267,28 +267,12 @@ def create_withdrawal_chart(data: FinanceData, fire_goal: Decimal) -> dcc.Graph:
     """Create stacked bar chart showing annual withdrawals by account type."""
     drawdown_df = get_retirement_drawdown_series(data, fire_goal=fire_goal)
 
-    # Calculate withdrawal from each account type per year
-    # This requires computing the difference in each account's balance year-over-year
     ages = drawdown_df["Age"].to_list()
-    withdrawals_by_account: dict[str, list[float]] = {acct: [] for acct in WITHDRAWAL_ORDER}
+    withdrawals_by_account: dict[str, list[float]] = {}
 
-    for i in range(len(ages)):
-        if i == 0:
-            # First year: withdrawal is (starting balance - ending balance for each account)
-            # But we recorded start-of-year balances, so we need to look at next year
-            for acct in WITHDRAWAL_ORDER:
-                if i + 1 < len(ages):
-                    withdrawn = float(drawdown_df[acct][i]) - float(drawdown_df[acct][i + 1])
-                else:
-                    withdrawn = float(drawdown_df[acct][i])  # Last year, withdraw remaining
-                withdrawals_by_account[acct].append(max(0, withdrawn))
-        else:
-            for acct in WITHDRAWAL_ORDER:
-                if i + 1 < len(ages):
-                    withdrawn = float(drawdown_df[acct][i]) - float(drawdown_df[acct][i + 1])
-                else:
-                    withdrawn = float(drawdown_df[acct][i])  # Last year, withdraw remaining
-                withdrawals_by_account[acct].append(max(0, withdrawn))
+    # Use the pre-computed per-account withdrawal columns
+    for acct in WITHDRAWAL_ORDER:
+        withdrawals_by_account[acct] = [float(w) for w in drawdown_df[f"{acct}_Withdrawal"].to_list()]
 
     fig = go.Figure()
 

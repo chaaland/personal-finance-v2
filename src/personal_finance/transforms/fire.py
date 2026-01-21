@@ -287,7 +287,7 @@ GROWTH_ACCOUNTS = {"Taxable Brokerage", "401k", "IRA", "HSA", "Roth IRA"}
 def get_retirement_drawdown_series(
     data: FinanceData,
     fire_goal: Decimal,
-    withdrawal_rate: Decimal = Decimal("0.04"),
+    base_annual_spend: Decimal | None = None,
     growth_rate: Decimal = Decimal("0.05"),
     inflation_rate: Decimal = Decimal("0.02"),
     retirement_age: int = 50,
@@ -307,7 +307,8 @@ def get_retirement_drawdown_series(
     Args:
         data: Finance data containing asset allocation with Account Type column
         fire_goal: Target FIRE number (starting balance at retirement)
-        withdrawal_rate: Annual withdrawal rate as decimal (e.g., 0.04 for 4%)
+        base_annual_spend: Annual spending in year 1 of retirement. If None, uses
+            projected annual spend from current spending data.
         growth_rate: Annual investment growth rate as decimal (e.g., 0.07 for 7%)
         inflation_rate: Annual inflation rate as decimal (e.g., 0.02 for 2%)
         retirement_age: Age at retirement
@@ -346,7 +347,8 @@ def get_retirement_drawdown_series(
         for account_type in WITHDRAWAL_ORDER:
             account_balances[account_type] = account_balances[account_type] * scale_factor
 
-    base_withdrawal = fire_goal * withdrawal_rate
+    # Use projected annual spend as default, allow override via parameter
+    base_withdrawal = get_projected_annual_spend(data) if base_annual_spend is None else base_annual_spend
     growth_multiplier = Decimal("1") + growth_rate
     inflation_multiplier = Decimal("1") + inflation_rate
 
@@ -371,6 +373,9 @@ def get_retirement_drawdown_series(
         remaining_to_withdraw = min(annual_withdrawal, total_balance)
         row["Withdrawal"] = remaining_to_withdraw
 
+        # Track per-account withdrawals
+        withdrawals_this_year: dict[str, Decimal] = {acct: Decimal("0") for acct in WITHDRAWAL_ORDER}
+
         # Deplete accounts in priority order
         for account_type in WITHDRAWAL_ORDER:
             if remaining_to_withdraw <= 0:
@@ -378,7 +383,12 @@ def get_retirement_drawdown_series(
             available = account_balances[account_type]
             withdraw_from_this = min(available, remaining_to_withdraw)
             account_balances[account_type] = available - withdraw_from_this
+            withdrawals_this_year[account_type] = withdraw_from_this
             remaining_to_withdraw -= withdraw_from_this
+
+        # Store per-account withdrawal amounts
+        for account_type in WITHDRAWAL_ORDER:
+            row[f"{account_type}_Withdrawal"] = withdrawals_this_year[account_type]
 
         rows.append(row)
 
@@ -390,7 +400,8 @@ def get_retirement_drawdown_series(
 
     # Create DataFrame and cast to Decimal
     df = pl.DataFrame(rows)
-    currency_cols = WITHDRAWAL_ORDER + ["Total_Balance", "Withdrawal"]
+    withdrawal_cols = [f"{acct}_Withdrawal" for acct in WITHDRAWAL_ORDER]
+    currency_cols = WITHDRAWAL_ORDER + ["Total_Balance", "Withdrawal"] + withdrawal_cols
     for col in currency_cols:
         df = df.with_columns(pl.col(col).cast(CURRENCY_DTYPE))
 
