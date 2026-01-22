@@ -7,7 +7,7 @@ from decimal import Decimal
 
 import polars as pl
 
-from personal_finance.data.loader import CURRENCY_DTYPE, FinanceData
+from personal_finance.data.loader import FinanceData
 
 
 def get_income_by_year(data: FinanceData) -> pl.DataFrame:

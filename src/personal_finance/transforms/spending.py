@@ -8,7 +8,7 @@ from decimal import Decimal
 
 import polars as pl
 
-from personal_finance.data.loader import CURRENCY_DTYPE, FinanceData
+from personal_finance.data.loader import FinanceData
 
 
 def get_combined_spending(data: FinanceData) -> pl.DataFrame:
@@ -30,11 +30,6 @@ def get_combined_spending(data: FinanceData) -> pl.DataFrame:
     combined_df = pl.concat([us_df, uk_df]).group_by("Dates").agg(pl.col("USD").sum().alias("Total_USD"))
 
     return combined_df.sort("Dates")
-
-
-def get_monthly_spending(data: FinanceData) -> pl.DataFrame:
-    """Get monthly spending totals in USD."""
-    return get_combined_spending(data)
 
 
 def get_monthly_spending_with_median(data: FinanceData, window_days: int = 120) -> pl.DataFrame:
