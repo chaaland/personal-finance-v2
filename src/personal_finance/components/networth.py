@@ -6,7 +6,7 @@ from dash import dcc, html
 from personal_finance.components.cards import metric_card
 from personal_finance.components.fire import FIRE_GOAL
 from personal_finance.data.loader import FinanceData
-from personal_finance.theme import CHART_TEMPLATE, COLORS, STYLES
+from personal_finance.theme import CHART_TEMPLATE, COLORS, FONTS, STYLES
 from personal_finance.transforms import (
     get_combined_networth,
     get_current_networth,
@@ -132,49 +132,95 @@ def create_yoy_networth_chart(data: FinanceData) -> go.Figure:
     return fig
 
 
-def create_asset_allocation_chart(data: FinanceData) -> go.Figure:
-    """Create US asset allocation donut chart."""
+# Color palette for pie/donut charts - muted, sophisticated tones
+CHART_COLORS = [
+    COLORS["chart_1"],  # Burnished gold
+    COLORS["chart_2"],  # Slate blue
+    COLORS["chart_3"],  # Sage green
+    COLORS["chart_4"],  # Terracotta
+    "#9F8AC4",  # Muted lavender
+    "#C98BA3",  # Dusty rose
+    "#6BA3A3",  # Muted teal
+    "#8B9CAE",  # Cool slate
+    "#C9A86A",  # Muted ochre
+]
+
+
+def create_asset_by_stock_chart(data: FinanceData) -> go.Figure:
+    """Create US asset allocation donut chart broken down by stock/asset."""
+    import polars as pl
+
     alloc_df = data.us_asset_allocation
 
-    # Sort by value descending for better visual presentation
-    alloc_df = alloc_df.sort("Value", descending=True)
+    # Aggregate values by asset (same stock may be in multiple account types)
+    asset_df = (
+        alloc_df.group_by("Asset")
+        .agg(pl.col("Value").sum())
+        .sort("Value", descending=True)
+    )
 
-    assets = alloc_df["Asset"].to_list()
-    values = alloc_df["Value"].to_list()
-    proportions = alloc_df["Proportion"].to_list()
-
-    # Color palette for the pie slices - muted, sophisticated tones
-    chart_colors = [
-        COLORS["chart_1"],  # Burnished gold
-        COLORS["chart_2"],  # Slate blue
-        COLORS["chart_3"],  # Sage green
-        COLORS["chart_4"],  # Terracotta
-        "#9F8AC4",  # Muted lavender
-        "#C98BA3",  # Dusty rose
-        "#6BA3A3",  # Muted teal
-        "#8B9CAE",  # Cool slate
-        "#C9A86A",  # Muted ochre
-    ]
+    assets = asset_df["Asset"].to_list()
+    values = asset_df["Value"].to_list()
 
     fig = go.Figure(
         go.Pie(
             labels=assets,
             values=values,
             hole=0.55,
-            marker={"colors": chart_colors[: len(assets)]},
+            marker={"colors": CHART_COLORS[: len(assets)]},
             textinfo="label+percent",
             textposition="outside",
-            textfont={"size": 11, "color": COLORS["text_secondary"]},
+            textfont={"size": 10, "color": COLORS["text_secondary"]},
             hovertemplate="<b>%{label}</b><br>$%{value:,.0f}<br>%{percent}<extra></extra>",
             pull=[0.02] * len(assets),
         )
     )
 
     fig.update_layout(
-        title="US Asset Allocation",
+        title="By Stock",
         template=CHART_TEMPLATE,
         showlegend=False,
-        margin={"t": 60, "r": 80, "b": 40, "l": 80},
+        margin={"t": 60, "r": 60, "b": 40, "l": 60},
+    )
+
+    return fig
+
+
+def create_asset_by_account_type_chart(data: FinanceData) -> go.Figure:
+    """Create US asset allocation donut chart broken down by account type."""
+    import polars as pl
+
+    alloc_df = data.us_asset_allocation
+
+    # Aggregate values by account type
+    account_df = (
+        alloc_df.group_by("Account Type")
+        .agg(pl.col("Value").sum())
+        .sort("Value", descending=True)
+    )
+
+    account_types = account_df["Account Type"].to_list()
+    values = account_df["Value"].to_list()
+
+    fig = go.Figure(
+        go.Pie(
+            labels=account_types,
+            values=values,
+            hole=0.55,
+            marker={"colors": CHART_COLORS[: len(account_types)]},
+            textinfo="label+percent",
+            textposition="outside",
+            textfont={"size": 10, "color": COLORS["text_secondary"]},
+            hovertemplate="<b>%{label}</b><br>$%{value:,.0f}<br>%{percent}<extra></extra>",
+            pull=[0.02] * len(account_types),
+        )
+    )
+
+    fig.update_layout(
+        title="By Account Type",
+        template=CHART_TEMPLATE,
+        showlegend=False,
+        margin={"t": 60, "r": 60, "b": 40, "l": 60},
     )
 
     return fig
@@ -205,23 +251,52 @@ def create_networth_tab(data: FinanceData) -> html.Div:
                 style=STYLES["chart_container"],
                 children=[dcc.Graph(figure=create_networth_chart(data), config={"displayModeBar": False})],
             ),
-            # Two-column layout for YoY and Asset Allocation
+            # US Asset Allocation - full width with two donut charts side by side
             html.Div(
-                style={**STYLES["grid"], "gridTemplateColumns": "1fr 1fr"},
+                style={
+                    **STYLES["chart_container"],
+                    "display": "flex",
+                    "flexDirection": "column",
+                },
                 children=[
-                    # YoY change chart
-                    html.Div(
-                        style=STYLES["chart_container"],
-                        children=[dcc.Graph(figure=create_yoy_networth_chart(data), config={"displayModeBar": False})],
+                    html.H3(
+                        "US Asset Allocation",
+                        style={
+                            "fontFamily": FONTS["display"],
+                            "fontSize": "20px",
+                            "color": COLORS["text_primary"],
+                            "margin": "0 0 16px 0",
+                        },
                     ),
-                    # Asset allocation donut chart
                     html.Div(
-                        style=STYLES["chart_container"],
+                        style={"display": "flex", "gap": "8px"},
                         children=[
-                            dcc.Graph(figure=create_asset_allocation_chart(data), config={"displayModeBar": False})
+                            html.Div(
+                                style={"flex": "1"},
+                                children=[
+                                    dcc.Graph(
+                                        figure=create_asset_by_stock_chart(data),
+                                        config={"displayModeBar": False},
+                                    )
+                                ],
+                            ),
+                            html.Div(
+                                style={"flex": "1"},
+                                children=[
+                                    dcc.Graph(
+                                        figure=create_asset_by_account_type_chart(data),
+                                        config={"displayModeBar": False},
+                                    )
+                                ],
+                            ),
                         ],
                     ),
                 ],
+            ),
+            # YoY change chart
+            html.Div(
+                style=STYLES["chart_container"],
+                children=[dcc.Graph(figure=create_yoy_networth_chart(data), config={"displayModeBar": False})],
             ),
         ]
     )
