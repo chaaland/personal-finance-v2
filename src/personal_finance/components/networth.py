@@ -143,17 +143,17 @@ def create_asset_allocation_chart(data: FinanceData) -> go.Figure:
     values = alloc_df["Value"].to_list()
     proportions = alloc_df["Proportion"].to_list()
 
-    # Color palette for the pie slices
+    # Color palette for the pie slices - muted, sophisticated tones
     chart_colors = [
-        COLORS["chart_1"],  # Gold
-        COLORS["chart_2"],  # Sapphire
-        COLORS["chart_3"],  # Emerald
-        COLORS["chart_4"],  # Amber
-        "#A78BFA",  # Purple
-        "#F472B6",  # Pink
-        "#2DD4BF",  # Teal
-        "#94A3B8",  # Slate
-        "#FBBF24",  # Yellow
+        COLORS["chart_1"],  # Burnished gold
+        COLORS["chart_2"],  # Slate blue
+        COLORS["chart_3"],  # Sage green
+        COLORS["chart_4"],  # Terracotta
+        "#9F8AC4",  # Muted lavender
+        "#C98BA3",  # Dusty rose
+        "#6BA3A3",  # Muted teal
+        "#8B9CAE",  # Cool slate
+        "#C9A86A",  # Muted ochre
     ]
 
     fig = go.Figure(

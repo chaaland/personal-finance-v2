@@ -31,16 +31,16 @@ COLORS = {
     "accent": "#D4A853",  # Burnished gold
     "accent_light": "#E5C06E",  # Lighter champagne
     "accent_glow": "rgba(212, 168, 83, 0.15)",  # Gold ambient glow
-    # Semantic - Jewel tones for dark backgrounds
-    "positive": "#4ADE80",  # Emerald green (more luminous for dark bg)
-    "positive_bg": "rgba(74, 222, 128, 0.12)",
-    "negative": "#F87171",  # Coral red (softer for dark bg)
-    "negative_bg": "rgba(248, 113, 113, 0.12)",
-    # Charts - Luminous jewel palette against dark canvas
-    "chart_1": "#D4A853",  # Burnished gold
-    "chart_2": "#60A5FA",  # Sapphire blue
-    "chart_3": "#4ADE80",  # Emerald green
-    "chart_4": "#FB923C",  # Amber orange
+    # Semantic - Muted tones for refined dark aesthetic
+    "positive": "#6EBF8B",  # Sage green (sophisticated, less saturated)
+    "positive_bg": "rgba(110, 191, 139, 0.12)",
+    "negative": "#E07A7A",  # Dusty rose (softer coral)
+    "negative_bg": "rgba(224, 122, 122, 0.12)",
+    # Charts - Muted, sophisticated palette for professional finance
+    "chart_1": "#D4A853",  # Burnished gold (primary accent - unchanged)
+    "chart_2": "#7BA3C9",  # Slate blue (desaturated sapphire)
+    "chart_3": "#6EBF8B",  # Sage green (muted emerald)
+    "chart_4": "#D4956A",  # Terracotta (muted amber)
     # Borders and lines - Subtle dark borders
     "border": "#27272A",  # Zinc-800
     "border_strong": "#3F3F46",  # Zinc-700
@@ -156,7 +156,7 @@ STYLES = {
         "backgroundColor": COLORS["positive_bg"],
         "borderRadius": "3px",
         "display": "inline-block",
-        "border": f"1px solid rgba(74, 222, 128, 0.2)",
+        "border": f"1px solid rgba(110, 191, 139, 0.2)",
     },
     "metric_change_negative": {
         "fontSize": "13px",
@@ -167,7 +167,7 @@ STYLES = {
         "backgroundColor": COLORS["negative_bg"],
         "borderRadius": "3px",
         "display": "inline-block",
-        "border": f"1px solid rgba(248, 113, 113, 0.2)",
+        "border": f"1px solid rgba(224, 122, 122, 0.2)",
     },
     "tab": {
         "backgroundColor": "transparent",
