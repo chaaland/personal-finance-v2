@@ -163,6 +163,10 @@ def create_fire_projection_chart(
 # Ordered from warm (cash/liquid) to cool (tax-advantaged growth)
 # Each has a fill color (with opacity) and a line color (more saturated edge)
 ACCOUNT_PALETTE = {
+    "UK Cash": {
+        "fill": "rgba(196, 167, 125, 0.55)",  # Warm tan - UK liquid cash
+        "line": "rgba(196, 167, 125, 0.85)",
+    },
     "HYSA": {
         "fill": "rgba(251, 191, 114, 0.55)",  # Warm amber - liquid cash
         "line": "rgba(251, 191, 114, 0.85)",
@@ -174,6 +178,10 @@ ACCOUNT_PALETTE = {
     "Taxable Brokerage": {
         "fill": "rgba(134, 182, 159, 0.55)",  # Sage green - taxable growth
         "line": "rgba(134, 182, 159, 0.85)",
+    },
+    "UK Pension": {
+        "fill": "rgba(124, 165, 184, 0.55)",  # Slate blue - UK retirement
+        "line": "rgba(124, 165, 184, 0.85)",
     },
     "401k": {
         "fill": "rgba(116, 165, 193, 0.55)",  # Steel blue - employer retirement
@@ -195,9 +203,11 @@ ACCOUNT_PALETTE = {
 
 # Solid legend colors (for legend swatches)
 ACCOUNT_COLORS = {
+    "UK Cash": "#C4A77D",
     "HYSA": "#FBBF72",
     "Coinbase": "#F59E59",
     "Taxable Brokerage": "#86B69F",
+    "UK Pension": "#7CA5B8",
     "401k": "#74A5C1",
     "IRA": "#938DC2",
     "HSA": "#63B3AB",

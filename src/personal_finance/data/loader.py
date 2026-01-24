@@ -27,6 +27,7 @@ class FinanceData:
     uk_networth: pl.DataFrame
     total_comp: pl.DataFrame
     us_asset_allocation: pl.DataFrame
+    uk_asset_allocation: pl.DataFrame
 
 
 def load_excel(file_path: str | Path) -> FinanceData:
@@ -46,7 +47,15 @@ def load_excel(file_path: str | Path) -> FinanceData:
     if not path.exists():
         raise FileNotFoundError(f"File not found: {path}")
 
-    required_sheets = ["US Spend", "UK Spend", "US Networth", "UK Networth", "Total Comp", "US Asset Allocation"]
+    required_sheets = [
+        "US Spend",
+        "UK Spend",
+        "US Networth",
+        "UK Networth",
+        "Total Comp",
+        "US Asset Allocation",
+        "UK Asset Allocation",
+    ]
 
     try:
         us_spend_df = pl.read_excel(path, sheet_name="US Spend", engine="xlsx2csv")
@@ -55,6 +64,7 @@ def load_excel(file_path: str | Path) -> FinanceData:
         uk_networth_df = pl.read_excel(path, sheet_name="UK Networth", engine="xlsx2csv")
         total_comp_df = pl.read_excel(path, sheet_name="Total Comp", engine="xlsx2csv")
         us_asset_allocation_df = pl.read_excel(path, sheet_name="US Asset Allocation", engine="xlsx2csv")
+        uk_asset_allocation_df = pl.read_excel(path, sheet_name="UK Asset Allocation", engine="xlsx2csv")
     except Exception as e:
         raise ValueError(f"Error reading Excel file. Ensure sheets exist: {required_sheets}. Error: {e}")
 
@@ -75,7 +85,12 @@ def load_excel(file_path: str | Path) -> FinanceData:
 
     # Normalize asset allocation (filter out zero values, include Account Type for withdrawal strategy)
     us_asset_allocation_df = us_asset_allocation_df.select(
-        ["Asset", "Value", "Proportion", "Account Type"]
+        ["Asset", "Value", "Account Type"]
+    ).filter(pl.col("Value") > 0)
+
+    # UK asset allocation includes Conversion column for GBP→USD
+    uk_asset_allocation_df = uk_asset_allocation_df.select(
+        ["Asset", "Value", "Account Type", "Conversion"]
     ).filter(pl.col("Value") > 0)
 
     return FinanceData(
@@ -85,6 +100,7 @@ def load_excel(file_path: str | Path) -> FinanceData:
         uk_networth=uk_networth_df,
         total_comp=total_comp_df,
         us_asset_allocation=us_asset_allocation_df,
+        uk_asset_allocation=uk_asset_allocation_df,
     )
 
 

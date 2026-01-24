@@ -278,10 +278,34 @@ def get_fire_projection_series(
 
 
 # Tax-optimized withdrawal order: deplete taxable/low-growth first, preserve tax-free longest
-WITHDRAWAL_ORDER = ["HYSA", "Coinbase", "Taxable Brokerage", "401k", "IRA", "HSA", "Roth IRA"]
+# UK accounts added with appropriate positioning based on access timing
+WITHDRAWAL_ORDER = [
+    "UK Cash",  # Liquid, always accessible
+    "HYSA",
+    "Coinbase",
+    "Taxable Brokerage",
+    "UK Pension",  # Accessible at 55 (before US retirement accounts)
+    "401k",
+    "IRA",
+    "HSA",
+    "Roth IRA",
+]
 
 # Accounts that grow at the investment growth rate (5% default)
-GROWTH_ACCOUNTS = {"Taxable Brokerage", "401k", "IRA", "HSA", "Roth IRA"}
+GROWTH_ACCOUNTS = {"Taxable Brokerage", "401k", "IRA", "HSA", "Roth IRA", "UK Pension"}
+
+# Age at which each account type becomes accessible without penalty
+ACCOUNT_ACCESS_AGES: dict[str, int] = {
+    "UK Cash": 0,  # Always accessible
+    "HYSA": 0,
+    "Coinbase": 0,
+    "Taxable Brokerage": 0,
+    "UK Pension": 55,  # UK pension age (moving to 57 in 2028)
+    "401k": 60,  # Simplified from 59.5
+    "IRA": 60,
+    "HSA": 65,  # Penalty-free for non-medical at 65
+    "Roth IRA": 60,  # Contributions accessible anytime, but earnings at 59.5
+}
 
 
 def get_retirement_drawdown_series(
@@ -295,12 +319,12 @@ def get_retirement_drawdown_series(
 ) -> pl.DataFrame:
     """Calculate portfolio balance and withdrawals over retirement by account type.
 
-    Uses tax-optimized withdrawal strategy: deplete accounts in priority order
-    (HYSA → Coinbase → Taxable Brokerage → 401k/IRA → HSA → Roth IRA) to minimize
-    taxes and preserve tax-free growth as long as possible.
+    Uses tax-optimized withdrawal strategy: deplete accounts in priority order,
+    respecting account access ages. UK accounts are included with UK Pension
+    accessible at age 55 and US retirement accounts at 59.5/60.
 
-    Investment accounts (Taxable Brokerage, 401k, IRA, HSA, Roth IRA) grow at the
-    specified growth rate each year. HYSA and Coinbase are assumed to have no growth.
+    Investment accounts (Taxable Brokerage, 401k, IRA, HSA, Roth IRA, UK Pension)
+    grow at the specified growth rate each year. Cash accounts have no growth.
 
     Withdrawals increase annually by the inflation rate to maintain purchasing power.
 
@@ -324,19 +348,33 @@ def get_retirement_drawdown_series(
     """
     from personal_finance.data.loader import CURRENCY_DTYPE
 
-    # Aggregate balances by account type using polars group_by
-    allocation_df = data.us_asset_allocation
-    grouped = (
-        allocation_df.group_by("Account Type")
+    # Aggregate US balances by account type
+    us_grouped = (
+        data.us_asset_allocation.group_by("Account Type")
         .agg(pl.col("Value").sum().alias("Total"))
         .to_dict(as_series=False)
     )
 
-    # Convert to dict with Decimal values
+    # Initialize all account types to zero
     account_balances: dict[str, Decimal] = {
         account_type: Decimal("0") for account_type in WITHDRAWAL_ORDER
     }
-    for account_type, total in zip(grouped["Account Type"], grouped["Total"]):
+
+    # Add US account balances
+    for account_type, total in zip(us_grouped["Account Type"], us_grouped["Total"]):
+        if account_type in account_balances:
+            account_balances[account_type] = Decimal(str(total)) if total else Decimal("0")
+
+    # Add UK account balances (convert to USD using Conversion column)
+    uk_grouped = (
+        data.uk_asset_allocation.with_columns(
+            (pl.col("Value") * pl.col("Conversion")).alias("Value_USD")
+        )
+        .group_by("Account Type")
+        .agg(pl.col("Value_USD").sum().alias("Total"))
+        .to_dict(as_series=False)
+    )
+    for account_type, total in zip(uk_grouped["Account Type"], uk_grouped["Total"]):
         if account_type in account_balances:
             account_balances[account_type] = Decimal(str(total)) if total else Decimal("0")
 
@@ -376,10 +414,14 @@ def get_retirement_drawdown_series(
         # Track per-account withdrawals
         withdrawals_this_year: dict[str, Decimal] = {acct: Decimal("0") for acct in WITHDRAWAL_ORDER}
 
-        # Deplete accounts in priority order
+        # Deplete accounts in priority order, respecting access ages
         for account_type in WITHDRAWAL_ORDER:
             if remaining_to_withdraw <= 0:
                 break
+            # Skip accounts not yet accessible at this age
+            access_age = ACCOUNT_ACCESS_AGES.get(account_type, 0)
+            if age < access_age:
+                continue
             available = account_balances[account_type]
             withdraw_from_this = min(available, remaining_to_withdraw)
             account_balances[account_type] = available - withdraw_from_this
