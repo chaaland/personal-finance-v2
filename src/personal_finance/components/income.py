@@ -18,6 +18,7 @@ from personal_finance.transforms import (
 def create_income_chart(data: FinanceData) -> go.Figure:
     """Create grouped bar chart of gross vs net income by year."""
     income_df = get_income_by_year(data)
+    max_value = float(income_df["Gross_USD"].max())
 
     fig = go.Figure()
 
@@ -54,6 +55,16 @@ def create_income_chart(data: FinanceData) -> go.Figure:
         yaxis_tickprefix="$",
         template=CHART_TEMPLATE,
         barmode="group",
+        legend={
+            "orientation": "h",
+            "yanchor": "bottom",
+            "y": 1.02,
+            "xanchor": "left",
+            "x": 0,
+            "font": {"size": 13},
+        },
+        margin={"t": 80},
+        yaxis_range=[0, max_value * 1.15],
     )
 
     return fig

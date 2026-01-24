@@ -52,6 +52,15 @@ def create_spending_chart(data: FinanceData) -> go.Figure:
         yaxis_title="",
         yaxis_tickprefix="$",
         template=CHART_TEMPLATE,
+        legend={
+            "orientation": "h",
+            "yanchor": "bottom",
+            "y": 1.02,
+            "xanchor": "left",
+            "x": 0,
+            "font": {"size": 13},
+        },
+        margin={"t": 80},
     )
 
     return fig
@@ -60,6 +69,7 @@ def create_spending_chart(data: FinanceData) -> go.Figure:
 def create_annual_spending_chart(data: FinanceData) -> go.Figure:
     """Create annual spending bar chart."""
     yearly_df = get_spending_by_year(data)
+    max_value = float(yearly_df["Total_USD"].max())
 
     fig = go.Figure(
         go.Bar(
@@ -78,6 +88,7 @@ def create_annual_spending_chart(data: FinanceData) -> go.Figure:
         yaxis_title="",
         yaxis_tickprefix="$",
         template=CHART_TEMPLATE,
+        yaxis_range=[0, max_value * 1.15],
     )
 
     return fig

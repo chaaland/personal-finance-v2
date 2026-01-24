@@ -100,6 +100,15 @@ def create_networth_chart(data: FinanceData, lookback_years: int = 3) -> go.Figu
         yaxis_tickprefix="$",
         template=CHART_TEMPLATE,
         hovermode="x unified",
+        legend={
+            "orientation": "h",
+            "yanchor": "bottom",
+            "y": 1.02,
+            "xanchor": "left",
+            "x": 0,
+            "font": {"size": 13},
+        },
+        margin={"t": 80},
     )
 
     return fig
@@ -108,8 +117,11 @@ def create_networth_chart(data: FinanceData, lookback_years: int = 3) -> go.Figu
 def create_yoy_networth_chart(data: FinanceData) -> go.Figure:
     """Create year-over-year net worth change bar chart."""
     yoy_df = get_yoy_networth_changes(data)
+    changes = yoy_df["Change"].to_list()
+    max_val = float(max(changes))
+    min_val = float(min(changes))
 
-    colors = [COLORS["positive"] if c >= 0 else COLORS["negative"] for c in yoy_df["Change"].to_list()]
+    colors = [COLORS["positive"] if c >= 0 else COLORS["negative"] for c in changes]
 
     fig = go.Figure(
         go.Bar(
@@ -118,7 +130,7 @@ def create_yoy_networth_chart(data: FinanceData) -> go.Figure:
             marker_color=colors,
             text=[f"${c / 1000:+,.0f}K" for c in yoy_df["Change"].to_list()],
             textposition="outside",
-            textfont={"size": 11, "color": COLORS["text_secondary"]},
+            textfont={"size": 14, "color": COLORS["text_secondary"]},
         )
     )
 
@@ -128,6 +140,7 @@ def create_yoy_networth_chart(data: FinanceData) -> go.Figure:
         yaxis_title="",
         yaxis_tickprefix="$",
         template=CHART_TEMPLATE,
+        yaxis_range=[min_val * 1.15 if min_val < 0 else 0, max_val * 1.15],
     )
 
     return fig

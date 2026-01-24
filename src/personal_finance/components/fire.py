@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 from dash import dcc, html
 
 from personal_finance.data.loader import FinanceData
-from personal_finance.theme import CHART_TEMPLATE, COLORS, STYLES
+from personal_finance.theme import CHART_TEMPLATE, COLORS, STYLES, format_currency
 from personal_finance.transforms import (
     WITHDRAWAL_ORDER,
     get_current_runway_years,
@@ -35,7 +35,7 @@ def create_fire_metrics_row(
         children=[
             html.P("FIRE Goal", style=STYLES["metric_label"]),
             html.P(
-                f"${float(fire_number):,.0f}",
+                format_currency(fire_number),
                 style=STYLES["metric_value"],
             ),
         ],
