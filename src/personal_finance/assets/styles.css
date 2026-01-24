@@ -1,0 +1,35 @@
+/* Segmented button styling for RadioItems */
+.segmented-button {
+    display: inline-flex;
+    background-color: #18181B;
+    border: 1px solid #3F3F46;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.segmented-button label {
+    padding: 6px 14px;
+    font-size: 11px;
+    font-weight: 500;
+    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #78716C;
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin: 0;
+}
+
+.segmented-button label:hover {
+    color: #A8A29E;
+    background-color: #1F1F23;
+}
+
+/* Use :has() for checked state - supported in all modern browsers */
+.segmented-button label:has(input[type="radio"]:checked) {
+    color: #D4A853;
+    background-color: #1F1F23;
+    font-weight: 600;
+}

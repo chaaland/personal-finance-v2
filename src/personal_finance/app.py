@@ -219,6 +219,26 @@ def create_app() -> Dash:
         }
         return new_is_open, chevron_style
 
+    @callback(
+        Output("asset-by-stock-chart", "figure"),
+        Output("asset-by-account-type-chart", "figure"),
+        Input("asset-allocation-region-selector", "value"),
+    )
+    def update_asset_allocation_charts(region: str):
+        """Update asset allocation charts when region selection changes."""
+        if _current_data is None:
+            return no_update, no_update
+
+        from personal_finance.components.networth import (
+            create_asset_by_account_type_chart,
+            create_asset_by_stock_chart,
+        )
+
+        stock_fig = create_asset_by_stock_chart(_current_data, region)
+        account_fig = create_asset_by_account_type_chart(_current_data, region)
+
+        return stock_fig, account_fig
+
     return app
 
 

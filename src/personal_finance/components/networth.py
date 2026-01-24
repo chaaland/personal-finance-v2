@@ -1,6 +1,7 @@
 """Net worth tab component."""
 
 import plotly.graph_objects as go
+import polars as pl
 from dash import dcc, html
 
 from personal_finance.components.cards import metric_card
@@ -146,38 +147,75 @@ CHART_COLORS = [
 ]
 
 
-def create_asset_by_stock_chart(data: FinanceData) -> go.Figure:
-    """Create US asset allocation donut chart broken down by stock/asset."""
-    import polars as pl
+def _prepare_asset_allocation_df(data: FinanceData, region: str) -> pl.DataFrame:
+    """Prepare asset allocation DataFrame for the specified region.
 
-    alloc_df = data.us_asset_allocation
+    Args:
+        data: Finance data containing US and UK asset allocations.
+        region: One of "US", "UK", or "All".
 
-    # Aggregate values by asset (same stock may be in multiple account types)
-    asset_df = (
-        alloc_df.group_by("Asset")
-        .agg(pl.col("Value").sum())
-        .sort("Value", descending=True)
-    )
+    Returns:
+        DataFrame with columns: Asset, Value (in USD), Account Type
+    """
+    value_col = pl.col("Value")
+    conversion_col = pl.col("Conversion")
 
-    assets = asset_df["Asset"].to_list()
-    values = asset_df["Value"].to_list()
+    if region == "US":
+        return data.us_asset_allocation
+    elif region == "UK":
+        # Convert UK values from GBP to USD using the Conversion column
+        return data.uk_asset_allocation.with_columns((value_col * conversion_col).alias("Value")).select(
+            ["Asset", "Value", "Account Type"]
+        )
+    else:  # "All"
+        us_df = data.us_asset_allocation
+        uk_usd_df = data.uk_asset_allocation.with_columns((value_col * conversion_col).alias("Value")).select(
+            ["Asset", "Value", "Account Type"]
+        )
+        return pl.concat([us_df, uk_usd_df])
+
+
+def _create_allocation_donut_chart(
+    data: FinanceData,
+    region: str,
+    group_by: str,
+    title: str,
+) -> go.Figure:
+    """Create asset allocation donut chart grouped by specified column.
+
+    Args:
+        data: Finance data containing asset allocations.
+        region: One of "US", "UK", or "All".
+        group_by: Column name to group by ("Asset" or "Account Type").
+        title: Chart title.
+
+    Returns:
+        Plotly donut chart figure.
+    """
+    alloc_df = _prepare_asset_allocation_df(data, region)
+
+    value_col = pl.col("Value")
+    grouped_df = alloc_df.group_by(group_by).agg(value_col.sum()).sort("Value", descending=True)
+
+    labels = grouped_df[group_by].to_list()
+    values = grouped_df["Value"].to_list()
 
     fig = go.Figure(
         go.Pie(
-            labels=assets,
+            labels=labels,
             values=values,
             hole=0.55,
-            marker={"colors": CHART_COLORS[: len(assets)]},
+            marker={"colors": CHART_COLORS[: len(labels)]},
             textinfo="label+percent",
             textposition="outside",
             textfont={"size": 10, "color": COLORS["text_secondary"]},
             hovertemplate="<b>%{label}</b><br>$%{value:,.0f}<br>%{percent}<extra></extra>",
-            pull=[0.02] * len(assets),
+            pull=[0.02] * len(labels),
         )
     )
 
     fig.update_layout(
-        title="By Stock",
+        title=title,
         template=CHART_TEMPLATE,
         showlegend=False,
         margin={"t": 60, "r": 60, "b": 40, "l": 60},
@@ -186,44 +224,30 @@ def create_asset_by_stock_chart(data: FinanceData) -> go.Figure:
     return fig
 
 
-def create_asset_by_account_type_chart(data: FinanceData) -> go.Figure:
-    """Create US asset allocation donut chart broken down by account type."""
-    import polars as pl
+def create_asset_by_stock_chart(data: FinanceData, region: str = "US") -> go.Figure:
+    """Create asset allocation donut chart broken down by stock/asset.
 
-    alloc_df = data.us_asset_allocation
+    Args:
+        data: Finance data containing asset allocations.
+        region: One of "US", "UK", or "All". Defaults to "US".
 
-    # Aggregate values by account type
-    account_df = (
-        alloc_df.group_by("Account Type")
-        .agg(pl.col("Value").sum())
-        .sort("Value", descending=True)
-    )
+    Returns:
+        Plotly donut chart figure.
+    """
+    return _create_allocation_donut_chart(data, region, "Asset", "By Stock")
 
-    account_types = account_df["Account Type"].to_list()
-    values = account_df["Value"].to_list()
 
-    fig = go.Figure(
-        go.Pie(
-            labels=account_types,
-            values=values,
-            hole=0.55,
-            marker={"colors": CHART_COLORS[: len(account_types)]},
-            textinfo="label+percent",
-            textposition="outside",
-            textfont={"size": 10, "color": COLORS["text_secondary"]},
-            hovertemplate="<b>%{label}</b><br>$%{value:,.0f}<br>%{percent}<extra></extra>",
-            pull=[0.02] * len(account_types),
-        )
-    )
+def create_asset_by_account_type_chart(data: FinanceData, region: str = "US") -> go.Figure:
+    """Create asset allocation donut chart broken down by account type.
 
-    fig.update_layout(
-        title="By Account Type",
-        template=CHART_TEMPLATE,
-        showlegend=False,
-        margin={"t": 60, "r": 60, "b": 40, "l": 60},
-    )
+    Args:
+        data: Finance data containing asset allocations.
+        region: One of "US", "UK", or "All". Defaults to "US".
 
-    return fig
+    Returns:
+        Plotly donut chart figure.
+    """
+    return _create_allocation_donut_chart(data, region, "Account Type", "By Account Type")
 
 
 def create_networth_tab(data: FinanceData) -> html.Div:
@@ -251,7 +275,7 @@ def create_networth_tab(data: FinanceData) -> html.Div:
                 style=STYLES["chart_container"],
                 children=[dcc.Graph(figure=create_networth_chart(data), config={"displayModeBar": False})],
             ),
-            # US Asset Allocation - full width with two donut charts side by side
+            # Asset Allocation - full width with two donut charts side by side
             html.Div(
                 style={
                     **STYLES["chart_container"],
@@ -259,15 +283,40 @@ def create_networth_tab(data: FinanceData) -> html.Div:
                     "flexDirection": "column",
                 },
                 children=[
-                    html.H3(
-                        "US Asset Allocation",
+                    # Header row with title and region selector
+                    html.Div(
                         style={
-                            "fontFamily": FONTS["display"],
-                            "fontSize": "20px",
-                            "color": COLORS["text_primary"],
-                            "margin": "0 0 16px 0",
+                            "display": "flex",
+                            "justifyContent": "space-between",
+                            "alignItems": "center",
+                            "marginBottom": "16px",
                         },
+                        children=[
+                            html.H3(
+                                "Asset Allocation",
+                                style={
+                                    "fontFamily": FONTS["display"],
+                                    "fontSize": "20px",
+                                    "color": COLORS["text_primary"],
+                                    "margin": "0",
+                                },
+                            ),
+                            # Segmented button for region selection (styled via CSS)
+                            dcc.RadioItems(
+                                id="asset-allocation-region-selector",
+                                options=[
+                                    {"label": "US", "value": "US"},
+                                    {"label": "UK", "value": "UK"},
+                                    {"label": "All", "value": "All"},
+                                ],
+                                value="US",
+                                inline=True,
+                                className="segmented-button",
+                                inputStyle={"display": "none"},
+                            ),
+                        ],
                     ),
+                    # Charts row
                     html.Div(
                         style={"display": "flex", "gap": "8px"},
                         children=[
@@ -275,7 +324,8 @@ def create_networth_tab(data: FinanceData) -> html.Div:
                                 style={"flex": "1"},
                                 children=[
                                     dcc.Graph(
-                                        figure=create_asset_by_stock_chart(data),
+                                        id="asset-by-stock-chart",
+                                        figure=create_asset_by_stock_chart(data, "US"),
                                         config={"displayModeBar": False},
                                     )
                                 ],
@@ -284,7 +334,8 @@ def create_networth_tab(data: FinanceData) -> html.Div:
                                 style={"flex": "1"},
                                 children=[
                                     dcc.Graph(
-                                        figure=create_asset_by_account_type_chart(data),
+                                        id="asset-by-account-type-chart",
+                                        figure=create_asset_by_account_type_chart(data, "US"),
                                         config={"displayModeBar": False},
                                     )
                                 ],
