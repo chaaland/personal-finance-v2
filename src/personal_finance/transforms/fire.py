@@ -12,7 +12,7 @@ from scipy.optimize import minimize_scalar
 
 from personal_finance.data.loader import FinanceData
 from personal_finance.transforms.networth import get_combined_networth, get_current_networth
-from personal_finance.transforms.spending import get_projected_annual_spend
+from personal_finance.transforms.spending import get_annual_spend_estimate
 
 
 class FireProjection(NamedTuple):
@@ -24,9 +24,9 @@ class FireProjection(NamedTuple):
 
 
 def get_fire_number(data: FinanceData, withdrawal_rate: Decimal = Decimal("0.04")) -> Decimal:
-    """Calculate FIRE number based on projected annual spending and withdrawal rate.
+    """Calculate FIRE number based on estimated annual spending and withdrawal rate.
 
-    FIRE number = projected_annual_spend / withdrawal_rate
+    FIRE number = annual_spend_estimate / withdrawal_rate
 
     Args:
         data: Finance data
@@ -35,10 +35,10 @@ def get_fire_number(data: FinanceData, withdrawal_rate: Decimal = Decimal("0.04"
     Returns:
         FIRE number in USD
     """
-    projected_spend = get_projected_annual_spend(data)
+    annual_spend = get_annual_spend_estimate(data)
     if withdrawal_rate == 0:
         return Decimal("0")
-    return projected_spend / withdrawal_rate
+    return annual_spend / withdrawal_rate
 
 
 def get_fire_progress_pct(data: FinanceData, fire_goal: Decimal) -> Decimal:
@@ -58,7 +58,7 @@ def get_fire_progress_pct(data: FinanceData, fire_goal: Decimal) -> Decimal:
 
 
 def get_current_runway_years(data: FinanceData) -> Decimal:
-    """Calculate how many years current net worth would last at projected spending.
+    """Calculate how many years current net worth would last at estimated annual spending.
 
     Args:
         data: Finance data
@@ -67,10 +67,12 @@ def get_current_runway_years(data: FinanceData) -> Decimal:
         Years of runway
     """
     current_nw = get_current_networth(data)
-    projected_spend = get_projected_annual_spend(data)
-    if projected_spend == 0:
-        return Decimal("0")
-    return current_nw / projected_spend
+    annual_spend = get_annual_spend_estimate(data)
+
+    if annual_spend == 0:
+        return Decimal("999")  # Effectively infinite runway
+
+    return current_nw / annual_spend
 
 
 def _fit_lad_regression(x_values: list[float], y_values: list[float]) -> tuple[float, float]:
@@ -363,7 +365,11 @@ def get_retirement_drawdown_series(
     # Add US account balances
     for account_type, total in zip(us_grouped["Account Type"], us_grouped["Total"]):
         if account_type in account_balances:
-            account_balances[account_type] = Decimal(str(total)) if total else Decimal("0")
+            # Handle None, 0, and NaN values
+            if total is None or total == 0 or (isinstance(total, float) and total != total):
+                account_balances[account_type] = Decimal("0")
+            else:
+                account_balances[account_type] = Decimal(str(total))
 
     # Add UK account balances (convert to USD using Conversion column)
     uk_grouped = (
@@ -376,7 +382,11 @@ def get_retirement_drawdown_series(
     )
     for account_type, total in zip(uk_grouped["Account Type"], uk_grouped["Total"]):
         if account_type in account_balances:
-            account_balances[account_type] = Decimal(str(total)) if total else Decimal("0")
+            # Handle None, 0, and NaN values
+            if total is None or total == 0 or (isinstance(total, float) and total != total):
+                account_balances[account_type] = Decimal("0")
+            else:
+                account_balances[account_type] = Decimal(str(total))
 
     # Scale balances to match FIRE goal (current allocation as proportion of target)
     current_total = sum(account_balances.values())
@@ -385,8 +395,8 @@ def get_retirement_drawdown_series(
         for account_type in WITHDRAWAL_ORDER:
             account_balances[account_type] = account_balances[account_type] * scale_factor
 
-    # Use projected annual spend as default, allow override via parameter
-    base_withdrawal = get_projected_annual_spend(data) if base_annual_spend is None else base_annual_spend
+    # Use annual spend estimate as default, allow override via parameter
+    base_withdrawal = base_annual_spend if base_annual_spend is not None else get_annual_spend_estimate(data)
     growth_multiplier = Decimal("1") + growth_rate
     inflation_multiplier = Decimal("1") + inflation_rate
 

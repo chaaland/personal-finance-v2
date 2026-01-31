@@ -103,6 +103,21 @@ def get_previous_year_spending(data: FinanceData) -> Decimal:
     return prev_year_df.select(pl.col("Total_USD").sum()).row(0)[0] or Decimal("0")
 
 
+def get_annual_spend_estimate(data: FinanceData) -> Decimal:
+    """Get best estimate of annual spending.
+
+    Returns projected annual spend based on YTD data. Falls back to previous year's
+    spending if YTD data is unavailable (e.g., at the start of the year).
+
+    This is the recommended function for getting an annual spending estimate
+    that works reliably throughout the year.
+    """
+    projected = get_projected_annual_spend(data)
+    if projected == 0:
+        return get_previous_year_spending(data)
+    return projected
+
+
 def get_spending_by_year(data: FinanceData) -> pl.DataFrame:
     """Get total spending per year in USD.
 

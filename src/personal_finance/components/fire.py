@@ -266,7 +266,7 @@ def create_drawdown_chart(data: FinanceData, fire_goal: Decimal) -> dcc.Graph:
         height=450,
         margin={"t": 80},
         showlegend=True,
-        legend={"orientation": "h", "yanchor": "top", "y": 1.12, "xanchor": "left", "x": 0},
+        legend={"orientation": "h", "yanchor": "top", "y": 1.12, "xanchor": "left", "x": 0, "font": {"size": 14}},
         hovermode="x unified",
     )
 
@@ -312,7 +312,7 @@ def create_withdrawal_chart(data: FinanceData, fire_goal: Decimal) -> dcc.Graph:
         height=450,
         margin={"t": 80},
         showlegend=True,
-        legend={"orientation": "h", "yanchor": "top", "y": 1.12, "xanchor": "left", "x": 0},
+        legend={"orientation": "h", "yanchor": "top", "y": 1.12, "xanchor": "left", "x": 0, "font": {"size": 14}},
     )
 
     return dcc.Graph(figure=fig, config={"displayModeBar": False})
