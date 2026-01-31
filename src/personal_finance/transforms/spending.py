@@ -177,7 +177,8 @@ class SpendingComparisonDetails:
 
     def format_explanation(self) -> str:
         """Format as human-readable explanation sentence."""
-        return f"Based on ${float(self.ytd_spend):,.0f} spent through {self.months_elapsed} months, projecting ${float(self.projected_value):,.0f} vs ${float(self.previous_value):,.0f} in {self.previous_year}"
+        month_word = "month" if self.months_elapsed == 1 else "months"
+        return f"Based on ${float(self.ytd_spend):,.0f} spent over {self.months_elapsed} {month_word}, projecting ${float(self.projected_value):,.0f} vs ${float(self.previous_value):,.0f} in {self.previous_year}"
 
 
 def get_spending_projection_details(data: FinanceData) -> SpendingComparisonDetails:

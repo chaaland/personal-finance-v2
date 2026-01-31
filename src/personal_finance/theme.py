@@ -225,6 +225,7 @@ STYLES = {
         # "gridTemplateColumns": "repeat(auto-fit, minmax(280px, 1fr))",
         "gap": "20px",
         "marginBottom": "32px",
+        "alignItems": "start",
     },
     "chart_container": {
         "backgroundColor": COLORS["card"],

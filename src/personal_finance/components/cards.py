@@ -93,6 +93,7 @@ def fire_progress_card(
         "display": "flex",
         "justifyContent": "space-between",
         "alignItems": "flex-start",
+        "minHeight": "175px",
     }
 
     subtext_style = {
@@ -177,6 +178,7 @@ def fire_date_card(
         "display": "flex",
         "justifyContent": "space-between",
         "alignItems": "flex-start",
+        "minHeight": "175px",
     }
 
     chevron_style = {
@@ -264,6 +266,7 @@ def expandable_metric_card(
         "display": "flex",
         "justifyContent": "space-between",
         "alignItems": "flex-start",
+        "minHeight": "170px",
     }
 
     content_children = [

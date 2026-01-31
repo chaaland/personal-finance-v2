@@ -144,15 +144,19 @@ def create_spending_tab(data: FinanceData) -> html.Div:
                 style=STYLES["chart_container"],
                 children=[dcc.Graph(figure=create_spending_chart(data), config={"displayModeBar": False})],
             ),
-            # Annual spending chart
+            # Annual spending and savings rate charts side by side
             html.Div(
-                style=STYLES["chart_container"],
-                children=[dcc.Graph(figure=create_annual_spending_chart(data), config={"displayModeBar": False})],
-            ),
-            # Savings rate chart
-            html.Div(
-                style=STYLES["chart_container"],
-                children=[dcc.Graph(figure=create_savings_rate_chart(data), config={"displayModeBar": False})],
+                style={"display": "flex", "gap": "20px"},
+                children=[
+                    html.Div(
+                        style={**STYLES["chart_container"], "flex": "1", "marginBottom": "0"},
+                        children=[dcc.Graph(figure=create_annual_spending_chart(data), config={"displayModeBar": False})],
+                    ),
+                    html.Div(
+                        style={**STYLES["chart_container"], "flex": "1", "marginBottom": "0"},
+                        children=[dcc.Graph(figure=create_savings_rate_chart(data), config={"displayModeBar": False})],
+                    ),
+                ],
             ),
         ]
     )
