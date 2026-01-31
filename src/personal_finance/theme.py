@@ -75,14 +75,14 @@ CHART_TEMPLATE = {
         "xaxis": {
             "gridcolor": COLORS["divider"],
             "linecolor": COLORS["border"],
-            "tickfont": {"size": 11, "color": COLORS["text_muted"]},
+            "tickfont": {"size": 14, "color": COLORS["text_muted"]},
             "showgrid": False,
             "zeroline": False,
         },
         "yaxis": {
             "gridcolor": COLORS["border"],
             "linecolor": "rgba(0,0,0,0)",
-            "tickfont": {"size": 11, "color": COLORS["text_muted"]},
+            "tickfont": {"size": 14, "color": COLORS["text_muted"]},
             "showgrid": True,
             "gridwidth": 1,
             "zeroline": False,
