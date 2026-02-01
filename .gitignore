@@ -17,6 +17,7 @@ downloads/
 eggs/
 .eggs/
 lib/
+!static-site/src/lib/
 lib64/
 parts/
 sdist/
@@ -207,3 +208,19 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# TypeScript / Node.js
+node_modules/
+*.tsbuildinfo
+.npm/
+.yarn/
+.pnpm-store/
+
+# Build outputs
+.next/
+out/
+.nuxt/
+.svelte-kit/
+.astro/
+.parcel-cache/
+.turbo/
