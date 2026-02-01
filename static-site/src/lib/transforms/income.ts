@@ -5,7 +5,7 @@
 
 import Decimal from 'decimal.js';
 import { query } from '$lib/data/database';
-import type { IncomeDetails } from '$lib/data/types';
+import type { IncomeDetails, IncomeByYear } from '$lib/data/types';
 
 interface YtdIncomeRow {
   ytd_gross: number;
@@ -150,4 +150,34 @@ export function formatIncomeExplanation(details: IncomeDetails): string {
   const direction = details.change >= 0 ? 'Up' : 'Down';
   const absChange = Math.abs(details.change);
   return `${direction} $${absChange.toLocaleString('en-US', { maximumFractionDigits: 0 })} vs same period last year ($${details.previousYtdGross.toLocaleString('en-US', { maximumFractionDigits: 0 })})`;
+}
+
+interface IncomeByYearRow {
+  year: number;
+  gross_usd: number;
+  net_usd: number;
+}
+
+/**
+ * Get gross and net income per year in USD.
+ * Mirrors Python transforms/income.py get_income_by_year()
+ */
+export async function getIncomeByYear(): Promise<IncomeByYear[]> {
+  const sql = `
+    SELECT
+      EXTRACT(YEAR FROM dates)::INTEGER AS year,
+      SUM(gross * conversion) AS gross_usd,
+      SUM(net * conversion) AS net_usd
+    FROM total_comp
+    GROUP BY EXTRACT(YEAR FROM dates)
+    ORDER BY year
+  `;
+
+  const rows = await query<IncomeByYearRow>(sql);
+
+  return rows.map((row) => ({
+    year: row.year,
+    grossUsd: Number(row.gross_usd),
+    netUsd: Number(row.net_usd),
+  }));
 }

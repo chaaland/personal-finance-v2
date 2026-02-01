@@ -109,6 +109,12 @@ export interface YoyNetworthChange {
   changePct: number;
 }
 
+export interface IncomeByYear {
+  year: number;
+  grossUsd: number;
+  netUsd: number;
+}
+
 export interface ProjectionPoint {
   dates: Date;
   totalUsd: number;
