@@ -222,13 +222,16 @@ Port from `components/summary.py:108-211`:
 **Goal**: Add the Income tab.
 
 #### Step 3.1: Additional Transforms
-- [ ] getIncomeByYear() for grouped bar chart
+- [x] getIncomeByYear() for grouped bar chart
+  - Created: `static-site/src/lib/transforms/income.ts`
 
 #### Step 3.2: Charts
-- [ ] Annual income grouped bar chart (Gross vs Net)
+- [x] Annual income grouped bar chart (Gross vs Net)
+  - Created: `static-site/src/lib/components/charts/IncomeChart.svelte`
 
 #### Step 3.3: Tab Component
-- [ ] IncomeTab.svelte with metric cards + chart
+- [x] IncomeTab.svelte with metric cards + chart
+  - Created: `static-site/src/lib/components/tabs/IncomeTab.svelte`
 
 ---
 
