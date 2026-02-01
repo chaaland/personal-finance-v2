@@ -3,7 +3,7 @@
   import { initializeDatabase } from '$lib/data/database';
   import { loadExcelFile } from '$lib/data/loader';
   import { Header, TabBar, EmptyState } from '$lib/components';
-  import { SummaryTab, NetWorthTab } from '$lib/components/tabs';
+  import { SummaryTab, NetWorthTab, IncomeTab } from '$lib/components/tabs';
 
   let hasData = $state(false);
   let activeTab = $state('summary');
@@ -64,6 +64,8 @@
         <SummaryTab />
       {:else if activeTab === 'networth'}
         <NetWorthTab />
+      {:else if activeTab === 'income'}
+        <IncomeTab />
       {:else}
         <div class="placeholder">
           <p>{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} tab coming soon...</p>
