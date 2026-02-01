@@ -108,6 +108,53 @@ export async function getYoyIncomeComparison(): Promise<[Decimal, Decimal]> {
 }
 
 /**
+ * Compare YTD net income to same period last year.
+ * Returns [absolute_difference, percentage_difference]
+ */
+export async function getYoyNetIncomeComparison(): Promise<[Decimal, Decimal]> {
+  const sql = `
+    WITH current_info AS (
+      SELECT
+        EXTRACT(YEAR FROM MAX(dates)) AS current_year,
+        EXTRACT(MONTH FROM MAX(dates)) AS current_month
+      FROM total_comp
+    ),
+    current_ytd AS (
+      SELECT SUM(net * conversion) AS total
+      FROM total_comp, current_info
+      WHERE EXTRACT(YEAR FROM dates) = current_info.current_year
+    ),
+    previous_ytd AS (
+      SELECT SUM(net * conversion) AS total
+      FROM total_comp, current_info
+      WHERE EXTRACT(YEAR FROM dates) = current_info.current_year - 1
+        AND EXTRACT(MONTH FROM dates) <= current_info.current_month
+    )
+    SELECT
+      COALESCE(current_ytd.total, 0) AS current_ytd,
+      COALESCE(previous_ytd.total, 0) AS previous_ytd
+    FROM current_ytd, previous_ytd
+  `;
+
+  const rows = await query<YoyComparisonRow>(sql);
+  if (rows.length === 0) {
+    return [new Decimal(0), new Decimal(0)];
+  }
+
+  const current = new Decimal(rows[0].current_ytd || 0);
+  const previous = new Decimal(rows[0].previous_ytd || 0);
+
+  if (previous.isZero()) {
+    return [current, new Decimal(0)];
+  }
+
+  const absoluteDiff = current.minus(previous);
+  const percentageDiff = absoluteDiff.div(previous).mul(100);
+
+  return [absoluteDiff, percentageDiff];
+}
+
+/**
  * Get detailed YTD income info for display.
  */
 export async function getYtdIncomeDetails(): Promise<IncomeDetails> {
