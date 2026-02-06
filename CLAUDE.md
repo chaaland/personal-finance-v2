@@ -1,74 +1,123 @@
 # Personal Finance Dashboard
 
-A Python + Dash web application for personal finance tracking and retirement planning with accounts in both the US and UK.
+Personal finance tracking and retirement planning for US and UK accounts. Two implementations exist:
 
-## Quick Start
-
-```bash
-uv run finance-dashboard
-```
+| | Python/Dash (Original) | Static Site (New) |
+|---|---|---|
+| **Location** | `src/personal_finance/` | `static-site/` |
+| **Run** | `uv run finance-dashboard` | `cd static-site && npm run dev` |
+| **Hosting** | Local server | GitHub Pages |
 
 ## Tech Stack
 
-- **Package Manager**: `uv` for Python environment management
-- **Web Framework**: Dash with Bootstrap components
-- **Data Processing**: Polars (NEVER use pandas)
-- **Visualization**: Plotly
+### Static Site (Active Development)
+
+- **Framework**: Svelte 5 + Vite + TypeScript
+- **Data Processing**: DuckDB-WASM (SQL in browser)
+- **Charts**: Plotly.js
+- **Precision**: decimal.js for calculations, DuckDB `DOUBLE` for storage
+- **Build**: `npm run build` outputs to `dist/`
+
+### Python/Dash (Reference)
+
+- **Package Manager**: `uv`
+- **Framework**: Dash with Bootstrap
+- **Data Processing**: Polars (NEVER pandas)
+- **Charts**: Plotly
 
 ## Code Style
 
-### Formatting
+### TypeScript/Svelte (static-site/)
 
-- Use `black` with line length 120
-- Use `isort` for import sorting
-- Format command: `uv run black . && uv run isort .`
+- Use TypeScript strict mode
+- Use `decimal.js` for all currency calculations
+- SQL queries go in `src/lib/transforms/` files
+- Svelte components use `.svelte` extension
+- Format: `npm run format` (Prettier)
 
-### Naming Conventions
+### Python (src/personal_finance/)
 
-- DataFrame variables: name them `df` or suffix with `_df` (e.g., `transactions_df`)
-- Dictionary variables: name as `key_to_value` (e.g., `account_to_balance`, `date_to_transactions`)
-- Polars column expressions: suffix with `_col` (e.g., `amount_col = pl.col("amount")`)
-- Use `pl.Decimal` type for currency calculations
+- Format: `uv run black . && uv run isort .` (line length 120)
+- DataFrame variables: suffix with `_df` (e.g., `transactions_df`)
+- Dictionary variables: `key_to_value` pattern (e.g., `account_to_balance`)
+- Polars expressions: suffix with `_col` (e.g., `amount_col = pl.col("amount")`)
+- Use `pl.Decimal` for currency
 
 ## Git Workflow
 
-- **Branching**: Create feature branches from main: `feature/feature-name`
-- **Commits**: Use [Conventional Commits](https://www.conventionalcommits.org/) format:
+- **Branching**: `feature/feature-name` from main
+- **Commits**: [Conventional Commits](https://www.conventionalcommits.org/)
   - `feat:` new feature
   - `fix:` bug fix
-  - `refactor:` code change that neither fixes a bug nor adds a feature
-  - `style:` formatting, missing semicolons, etc.
-  - `docs:` documentation only
-  - `chore:` maintenance tasks
+  - `refactor:` code restructuring
+  - `style:` formatting
+  - `docs:` documentation
+  - `chore:` maintenance
+
+## Security & Sensitive Data
+
+**NEVER commit or add to code:**
+
+- API keys, tokens, or secrets
+- Passwords or credentials
+- Personally identifiable information (PII)
+- Financial data (account numbers, balances, transactions)
+- Real names, addresses, or contact information
+- Any data from uploaded Excel files
+
+Use placeholder/mock data in examples and tests. If sensitive data is accidentally staged, remove it before committing.
 
 ## Project Structure
 
+### Static Site
+
+```text
+static-site/
+├── src/
+│   ├── lib/
+│   │   ├── data/
+│   │   │   ├── loader.ts       # Excel → DuckDB ingestion
+│   │   │   ├── database.ts     # DuckDB-WASM singleton
+│   │   │   └── types.ts        # TypeScript interfaces
+│   │   ├── transforms/         # SQL query functions
+│   │   │   ├── networth.ts
+│   │   │   ├── income.ts
+│   │   │   ├── spending.ts
+│   │   │   ├── savings.ts
+│   │   │   └── fire.ts
+│   │   ├── components/
+│   │   │   ├── cards/          # MetricCard, ExpandableCard, etc.
+│   │   │   ├── charts/         # Plotly chart wrappers
+│   │   │   └── tabs/           # Tab components
+│   │   ├── stores/data.ts      # Svelte stores
+│   │   └── theme.ts            # Colors, fonts, formatters
+│   ├── App.svelte
+│   └── main.ts
+└── package.json
+```
+
+### Python (Reference)
+
 ```text
 src/personal_finance/
-├── app.py              # Main Dash application entry point
-├── theme.py            # Visual styling and color schemes
-├── components/         # UI components for each dashboard tab
-│   ├── summary.py      # High-level net worth and YoY comparisons
-│   ├── networth.py     # Net worth visualizations over time
-│   ├── income.py       # Income visualizations over time
-│   ├── spending.py     # Spending visualizations over time
-│   ├── fire.py         # FIRE metrics and retirement projections
-│   ├── cards.py        # Reusable card components
-│   └── layout.py       # Main layout and tab structure
-├── transforms/         # Data transformation logic
-│   ├── networth.py     # Net worth calculations
-│   ├── income.py       # Income aggregations
-│   ├── spending.py     # Spending categorization
-│   ├── savings.py      # Savings rate calculations
-│   └── fire.py         # FIRE projections and simulations
-└── data/
-    └── loader.py       # Data loading utilities
+├── app.py              # Dash entry point
+├── theme.py            # Styling (port to static-site/src/lib/theme.ts)
+├── components/         # UI components (port to Svelte)
+├── transforms/         # Data logic (port to SQL + TypeScript)
+└── data/loader.py      # Data loading
 ```
 
 ## Dashboard Tabs
 
-1. **Summary**: High-level metrics about net worth, spending, and year-over-year comparisons
-2. **Net Worth**: Visualizations of net worth changes over time
-3. **Income**: Income trends and breakdowns
-4. **Spending**: Spending patterns and categorization
-5. **FIRE**: Financial Independence / Retire Early metrics and projections
+1. **Summary**: Net worth, spending, YoY comparisons
+2. **Net Worth**: Net worth over time, asset allocation
+3. **Income**: Income trends
+4. **Spending**: Spending patterns, savings rate
+5. **FIRE**: Retirement projections and simulations
+
+## Migration Notes
+
+- See `MIGRATION_PLAN.md` for detailed implementation phases
+- FIRE goal is hardcoded at $4,250,000
+- Excel upload only (7 sheets) - no persistence
+- LAD regression implemented in JavaScript (see migration plan)
