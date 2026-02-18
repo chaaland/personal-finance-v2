@@ -5,7 +5,7 @@
 
 import Decimal from 'decimal.js';
 import { query } from '$lib/data/database';
-import type { SavingsRateDetails } from '$lib/data/types';
+import type { SavingsRateDetails, SavingsRateByYear } from '$lib/data/types';
 
 /**
  * Get take-home pay (net + pension contrib) for current year.
@@ -134,4 +134,46 @@ export async function getSavingsRateDetails(): Promise<SavingsRateDetails> {
 export function formatSavingsExplanation(details: SavingsRateDetails): string {
   const savings = details.takeHome - details.spending;
   return `Saving $${savings.toLocaleString('en-US', { maximumFractionDigits: 0 })} of $${details.takeHome.toLocaleString('en-US', { maximumFractionDigits: 0 })} take-home pay (${details.previousRate.toFixed(1)}% last year)`;
+}
+
+/**
+ * Get savings rate per year.
+ * Formula: ((Take_Home - Spending) / Take_Home) * 100
+ */
+export async function getSavingsRateByYear(): Promise<SavingsRateByYear[]> {
+  const sql = `
+    WITH take_home_by_year AS (
+      SELECT
+        EXTRACT(YEAR FROM dates)::INTEGER AS year,
+        SUM((net + pension_contrib) * conversion) AS take_home
+      FROM total_comp
+      GROUP BY EXTRACT(YEAR FROM dates)
+    ),
+    spending_by_year AS (
+      SELECT
+        EXTRACT(YEAR FROM dates)::INTEGER AS year,
+        SUM(total_usd) AS spending
+      FROM (
+        SELECT dates, total * conversion AS total_usd FROM us_spend
+        UNION ALL
+        SELECT dates, total * conversion AS total_usd FROM uk_spend
+      )
+      GROUP BY EXTRACT(YEAR FROM dates)
+    )
+    SELECT
+      t.year,
+      CASE
+        WHEN t.take_home = 0 THEN 0
+        ELSE ((t.take_home - COALESCE(s.spending, 0)) / t.take_home) * 100
+      END AS savings_rate
+    FROM take_home_by_year t
+    LEFT JOIN spending_by_year s ON t.year = s.year
+    ORDER BY t.year
+  `;
+
+  const rows = await query<{ year: number; savings_rate: number }>(sql);
+  return rows.map((row) => ({
+    year: row.year,
+    savingsRate: Number(row.savings_rate),
+  }));
 }

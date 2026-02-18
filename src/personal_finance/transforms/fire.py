@@ -164,11 +164,13 @@ def get_annual_nw_growth(data: FinanceData, lookback_years: int = 3) -> Decimal:
     start_date = period_df.select("Dates").row(0)[0]
 
     # Convert dates to years since start
+    # Use named access to avoid column index errors
+    dates_list = period_df["Dates"].to_list()
+    nw_list = period_df["Total_USD"].to_list()
+
     x_values = []
     y_values = []
-    for row in period_df.iter_rows():
-        date_val = row[0]  # Dates column
-        nw_val = row[1]  # Total_USD column
+    for date_val, nw_val in zip(dates_list, nw_list):
         days_elapsed = (date_val - start_date).days
         years_elapsed = days_elapsed / 365.25
         x_values.append(years_elapsed)

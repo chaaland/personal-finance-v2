@@ -3,3 +3,8 @@ export { default as NetWorthChart } from './NetWorthChart.svelte';
 export { default as YoYNetworthChart } from './YoYNetworthChart.svelte';
 export { default as AssetAllocationChart } from './AssetAllocationChart.svelte';
 export { default as IncomeChart } from './IncomeChart.svelte';
+export { default as MonthlySpendingChart } from './MonthlySpendingChart.svelte';
+export { default as AnnualSpendingChart } from './AnnualSpendingChart.svelte';
+export { default as SavingsRateChart } from './SavingsRateChart.svelte';
+export { default as PortfolioDrawdownChart } from './PortfolioDrawdownChart.svelte';
+export { default as WithdrawalSourceChart } from './WithdrawalSourceChart.svelte';
