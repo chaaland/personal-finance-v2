@@ -1,14 +1,17 @@
 <script lang="ts">
   interface Props {
     onFileSelect: (file: File) => void;
+    disabled?: boolean;
   }
 
-  let { onFileSelect }: Props = $props();
+  let { onFileSelect, disabled = false }: Props = $props();
 
   let fileInput: HTMLInputElement;
 
   function handleClick() {
-    fileInput.click();
+    if (!disabled) {
+      fileInput.click();
+    }
   }
 
   function handleFileChange(event: Event) {
@@ -29,7 +32,7 @@
   onchange={handleFileChange}
   class="hidden-input"
 />
-<button type="button" class="upload-button" onclick={handleClick}>
+<button type="button" class="upload-button" class:disabled onclick={handleClick} {disabled}>
   <span>Upload Data</span>
   <span class="arrow">&#8593;</span>
 </button>
@@ -70,5 +73,14 @@
 
   .arrow {
     font-size: 14px;
+  }
+
+  .upload-button.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .upload-button.disabled:hover {
+    background-color: transparent;
   }
 </style>

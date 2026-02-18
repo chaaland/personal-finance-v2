@@ -3,14 +3,15 @@
 
   interface Props {
     onFileUpload: (file: File) => void;
+    disabled?: boolean;
   }
 
-  let { onFileUpload }: Props = $props();
+  let { onFileUpload, disabled = false }: Props = $props();
 </script>
 
 <header class="header">
   <h1 class="title">Personal Finance</h1>
-  <FileUpload onFileSelect={onFileUpload} />
+  <FileUpload onFileSelect={onFileUpload} {disabled} />
 </header>
 
 <style>

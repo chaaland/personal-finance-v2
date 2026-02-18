@@ -1,41 +1,74 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { initializeDatabase } from '$lib/data/database';
-  import { loadExcelFile } from '$lib/data/loader';
-  import { Header, TabBar, EmptyState } from '$lib/components';
-  import { SummaryTab, NetWorthTab, IncomeTab } from '$lib/components/tabs';
+  import { loadExcelFile, type LoadError, type LoadProgress } from '$lib/data/loader';
+  import { Header, TabBar, EmptyState, ErrorDisplay } from '$lib/components';
+  import { SummaryTab, NetWorthTab, IncomeTab, SpendingTab, FIRETab } from '$lib/components/tabs';
+
+  type LoadingPhase = 'idle' | 'initializing' | 'processing' | 'ready' | 'error';
 
   let hasData = $state(false);
   let activeTab = $state('summary');
-  let isLoading = $state(false);
-  let error = $state<string | null>(null);
+  let loadingPhase = $state<LoadingPhase>('initializing');
+  let loadingMessage = $state('Initializing database...');
+  let errors = $state<LoadError[]>([]);
+  let warnings = $state<LoadError[]>([]);
+  let fileInputRef = $state<HTMLInputElement | null>(null);
 
   onMount(async () => {
     try {
       await initializeDatabase();
       console.log('DuckDB initialized successfully');
+      loadingPhase = 'idle';
     } catch (err) {
       console.error('Failed to initialize DuckDB:', err);
-      error = err instanceof Error ? err.message : 'Failed to initialize database';
+      errors = [{
+        sheet: 'System',
+        message: err instanceof Error ? err.message : 'Failed to initialize database',
+      }];
+      loadingPhase = 'error';
     }
   });
 
+  function handleProgress(progress: LoadProgress) {
+    loadingMessage = progress.message;
+  }
+
   async function handleFileUpload(file: File) {
-    isLoading = true;
-    error = null;
+    loadingPhase = 'processing';
+    loadingMessage = 'Reading Excel file...';
+    errors = [];
+    warnings = [];
+
     try {
-      const result = await loadExcelFile(file);
+      const result = await loadExcelFile(file, handleProgress);
       if (result.success) {
         hasData = true;
+        warnings = result.warnings;
+        loadingPhase = 'ready';
         console.log('Excel file loaded successfully');
+        if (result.warnings.length > 0) {
+          console.warn('Loaded with warnings:', result.warnings);
+        }
       } else {
-        error = result.error || 'Failed to load file';
+        errors = result.errors;
+        warnings = result.warnings;
+        loadingPhase = 'error';
       }
     } catch (err) {
-      error = err instanceof Error ? err.message : 'Failed to load file';
-    } finally {
-      isLoading = false;
+      errors = [{
+        sheet: 'System',
+        message: err instanceof Error ? err.message : 'Failed to load file',
+      }];
+      loadingPhase = 'error';
     }
+  }
+
+  function handleRetry() {
+    errors = [];
+    warnings = [];
+    loadingPhase = 'idle';
+    hasData = false;
   }
 
   function handleTabChange(tab: string) {
@@ -44,17 +77,15 @@
 </script>
 
 <div class="app">
-  <Header onFileUpload={handleFileUpload} />
+  <Header onFileUpload={handleFileUpload} disabled={loadingPhase === 'initializing' || loadingPhase === 'processing'} />
 
-  {#if isLoading}
+  {#if loadingPhase === 'initializing' || loadingPhase === 'processing'}
     <div class="loading">
       <div class="loading-spinner"></div>
-      <p>Loading data...</p>
+      <p>{loadingMessage}</p>
     </div>
-  {:else if error}
-    <div class="error">
-      <p>{error}</p>
-    </div>
+  {:else if loadingPhase === 'error'}
+    <ErrorDisplay {errors} {warnings} onRetry={handleRetry} />
   {:else if !hasData}
     <EmptyState />
   {:else}
@@ -66,6 +97,10 @@
         <NetWorthTab />
       {:else if activeTab === 'income'}
         <IncomeTab />
+      {:else if activeTab === 'spending'}
+        <SpendingTab />
+      {:else if activeTab === 'fire'}
+        <FIRETab />
       {:else}
         <div class="placeholder">
           <p>{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} tab coming soon...</p>
@@ -110,24 +145,6 @@
     to {
       transform: rotate(360deg);
     }
-  }
-
-  .error {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 300px;
-    color: var(--color-negative);
-    font-size: 16px;
-    text-align: center;
-    padding: 48px;
-    background-color: var(--color-negative-bg);
-    border: 1px solid var(--color-negative);
-    border-radius: 3px;
-  }
-
-  .error p {
-    margin: 0;
   }
 
   .placeholder {

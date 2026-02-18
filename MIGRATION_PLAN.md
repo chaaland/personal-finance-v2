@@ -240,17 +240,24 @@ Port from `components/summary.py:108-211`:
 **Goal**: Add the Spending tab.
 
 #### Step 4.1: Additional Transforms
-- [ ] getMonthlySpendingWithMedian()
-- [ ] getSpendingByYear()
-- [ ] getSavingsRateByYear()
+- [x] getMonthlySpendingWithMedian()
+  - Created: `static-site/src/lib/transforms/spending.ts`
+- [x] getSpendingByYear()
+  - Created: `static-site/src/lib/transforms/spending.ts`
+- [x] getSavingsRateByYear()
+  - Created: `static-site/src/lib/transforms/savings.ts`
 
 #### Step 4.2: Charts
-- [ ] Monthly spending line chart (raw + rolling median)
-- [ ] Annual spending bar chart
-- [ ] Savings rate by year bar chart (conditional colors)
+- [x] Monthly spending line chart (raw + rolling median)
+  - Created: `static-site/src/lib/components/charts/MonthlySpendingChart.svelte`
+- [x] Annual spending bar chart
+  - Created: `static-site/src/lib/components/charts/AnnualSpendingChart.svelte`
+- [x] Savings rate by year bar chart (conditional colors)
+  - Created: `static-site/src/lib/components/charts/SavingsRateChart.svelte`
 
 #### Step 4.3: Tab Component
-- [ ] SpendingTab.svelte
+- [x] SpendingTab.svelte
+  - Created: `static-site/src/lib/components/tabs/SpendingTab.svelte`
 
 ---
 
@@ -260,26 +267,42 @@ Port from `components/summary.py:108-211`:
 
 #### Step 5.1: Additional Transforms
 Port from `transforms/fire.py:313-460`:
-- [ ] getRetirementDrawdownSeries() - Complex simulation with account-specific rules
-- [ ] Account withdrawal order logic
-- [ ] Growth rate application per account type
+- [x] getRetirementDrawdownSeries() - Complex simulation with account-specific rules
+  - Created: `static-site/src/lib/transforms/fire.ts`
+- [x] Account withdrawal order logic (WITHDRAWAL_ORDER constant)
+- [x] Growth rate application per account type (GROWTH_ACCOUNTS set)
 
 #### Step 5.2: Charts
-- [ ] Portfolio balance stacked area chart (by account type)
-- [ ] Annual retirement income stacked bar chart
+- [x] Portfolio balance stacked area chart (by account type)
+  - Created: `static-site/src/lib/components/charts/PortfolioDrawdownChart.svelte`
+- [x] Annual retirement income stacked bar chart
+  - Created: `static-site/src/lib/components/charts/WithdrawalSourceChart.svelte`
 
 #### Step 5.3: Tab Component
-- [ ] FIRETab.svelte with metric row + both charts
+- [x] FIRETab.svelte with metric row + both charts
+  - Created: `static-site/src/lib/components/tabs/FIRETab.svelte`
 
 ---
 
 ### Phase 6: Polish & Deploy
 
-- [ ] Error handling for invalid Excel files
-- [ ] Loading states during data processing
-- [ ] Optimize bundle size
-- [ ] Build static site
-- [ ] Deploy to GitHub Pages
+- [x] Error handling for invalid Excel files
+  - Added validation in `static-site/src/lib/data/loader.ts` (sheet data, dates, numbers)
+  - Created `static-site/src/lib/components/ErrorDisplay.svelte` for structured error display
+  - Graceful degradation: warnings for optional sheets, errors for required sheets
+- [x] Loading states during data processing
+  - Three-phase loading: initializing → processing → ready
+  - Progress callback shows sheet-by-sheet loading progress
+  - Updated `static-site/src/App.svelte` with loading phases
+- [x] Optimize bundle size
+  - Configured Vite chunk splitting (plotly, xlsx, duckdb as separate chunks)
+  - Vite 5.4 for Svelte 5 compatibility
+- [x] Build static site
+  - Base path set to `/personal-finance-v2/` for GitHub Pages
+  - Added `static-site/public/coi-serviceworker.js` for SharedArrayBuffer support
+- [x] Deploy to GitHub Pages
+  - Created `.github/workflows/deploy.yml` for automated deployment
+  - Triggers on push to main branch
 
 ---
 

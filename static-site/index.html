@@ -13,6 +13,23 @@
   </head>
   <body>
     <div id="app"></div>
+    <script>
+      // Register service worker for cross-origin isolation (required for SharedArrayBuffer/DuckDB-WASM)
+      // Only needed in production - dev server sets headers directly
+      if ('serviceWorker' in navigator && window.location.hostname !== 'localhost') {
+        const base = '/personal-finance-v2/';
+        navigator.serviceWorker.register(base + 'coi-serviceworker.js', {
+          scope: base
+        }).then(function(registration) {
+          // If this is the first load (no controller), reload to activate isolation
+          if (!navigator.serviceWorker.controller) {
+            window.location.reload();
+          }
+        }).catch(function(error) {
+          console.warn('Service worker registration failed:', error);
+        });
+      }
+    </script>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
