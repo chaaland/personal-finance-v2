@@ -4,6 +4,11 @@
   import { loadExcelFile, type LoadError, type LoadProgress } from '$lib/data/loader';
   import { Header, TabBar, EmptyState, ErrorDisplay } from '$lib/components';
   import { SummaryTab, NetWorthTab, IncomeTab, SpendingTab, FIRETab } from '$lib/components/tabs';
+  import { theme } from '$lib/stores/theme.svelte';
+
+  $effect(() => {
+    document.documentElement.setAttribute('data-theme', theme.isDark ? 'dark' : 'light');
+  });
 
   type LoadingPhase = 'idle' | 'initializing' | 'processing' | 'ready' | 'error';
 

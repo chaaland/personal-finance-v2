@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import Plotly from 'plotly.js-dist-min';
-  import { COLORS, CHART_TEMPLATE } from '$lib/theme';
+  import { getColors, getChartTemplate } from '$lib/theme';
+  import { theme } from '$lib/stores/theme.svelte';
   import type { SwrSensitivityRow } from '$lib/data/types';
 
   interface Props {
@@ -24,13 +25,15 @@
 
   const hasValidData = $derived(validData.length > 0);
 
-  function renderChart() {
+  function renderChart(isDark: boolean) {
     if (!chartElement) return;
+    const colors = getColors(isDark);
+    const template = getChartTemplate(isDark);
 
     if (!hasValidData) {
       // Show "insufficient data" message
       const layout: Partial<Plotly.Layout> = {
-        ...CHART_TEMPLATE,
+        ...template,
         title: 'FIRE Date by Withdrawal Rate',
         annotations: [
           {
@@ -40,7 +43,7 @@
             x: 0.5,
             y: 0.5,
             showarrow: false,
-            font: { size: 14, color: COLORS.textSecondary },
+            font: { size: 14, color: colors.textSecondary },
           },
         ],
         height: 250,
@@ -73,23 +76,23 @@
       x: fireDates,
       type: 'bar',
       orientation: 'h',
-      marker: { color: COLORS.chart1 },
+      marker: { color: colors.chart1 },
       text: textLabels,
       textposition: 'outside',
-      textfont: { size: 12, color: COLORS.textSecondary },
+      textfont: { size: 12, color: colors.textSecondary },
       hovertext: hoverText,
       hoverinfo: 'text',
     };
 
     const layout: Partial<Plotly.Layout> = {
-      ...CHART_TEMPLATE,
+      ...template,
       title: 'FIRE Date by Withdrawal Rate',
       xaxis: {
-        ...CHART_TEMPLATE.xaxis,
+        ...template.xaxis,
         title: '',
       },
       yaxis: {
-        ...CHART_TEMPLATE.yaxis,
+        ...template.yaxis,
         title: '',
         categoryorder: 'array',
         categoryarray: [...swrLabels].reverse(), // Lowest SWR (3%) at bottom
@@ -105,7 +108,7 @@
   // Render chart on mount and when data changes
   $effect(() => {
     if (chartElement && data) {
-      renderChart();
+      renderChart(theme.isDark);
     }
   });
 </script>

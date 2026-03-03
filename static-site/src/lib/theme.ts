@@ -1,6 +1,7 @@
 /**
  * Theme system ported from Python theme.py
  * "Midnight Vault" - Swiss Banking aesthetic in dark mode
+ * "Ivory Ledger" - Warm parchment aesthetic in light mode
  */
 
 import Decimal from 'decimal.js';
@@ -43,6 +44,46 @@ export const COLORS = {
   border: '#27272A',
   borderStrong: '#3F3F46',
   divider: '#1F1F23',
+} as const;
+
+// Color palette - Ivory Ledger (Light Mode)
+export const LIGHT_COLORS = {
+  // Backgrounds - Warm parchment
+  background: '#F5F2EB',
+  card: '#FAFAF5',
+  cardElevated: '#FFFFFF',
+
+  // Text - Dark warm tones for readability
+  textPrimary: '#1A1714',
+  textSecondary: '#6B6560',
+  textMuted: '#9B918A',
+
+  // Accents - Deeper gold for light backgrounds
+  accent: '#B07A1A',
+  accentLight: '#C99027',
+  accentGlow: 'rgba(176, 122, 26, 0.10)',
+
+  // Semantic - Richer tones for light aesthetic
+  positive: '#1E7A45',
+  positiveBg: 'rgba(30, 122, 69, 0.08)',
+  negative: '#B83232',
+  negativeBg: 'rgba(184, 50, 50, 0.08)',
+
+  // Charts - Deeper saturated palette for light backgrounds
+  chart1: '#B07A1A',
+  chart2: '#3A6B96',
+  chart3: '#1E7A45',
+  chart4: '#B8622A',
+  chart5: '#7A5B9B',
+  chart6: '#B8622A',
+  chart7: '#3D8A8A',
+  chart8: '#516080',
+  chart9: '#9E7520',
+
+  // Borders - Warm light borders
+  border: '#DDD8CE',
+  borderStrong: '#C5BEB4',
+  divider: '#EAE5DC',
 } as const;
 
 // Typography
@@ -100,6 +141,63 @@ export const CHART_TEMPLATE = {
     bordercolor: COLORS.borderStrong,
   },
 };
+
+// Theme-aware color and template factories
+export function getColors(isDark: boolean) {
+  return isDark ? COLORS : LIGHT_COLORS;
+}
+
+export function getChartTemplate(isDark: boolean) {
+  const c = getColors(isDark);
+  return {
+    paper_bgcolor: c.card,
+    plot_bgcolor: c.card,
+    font: {
+      family: FONTS.body,
+      color: c.textSecondary,
+      size: 12,
+    },
+    title: {
+      font: {
+        family: FONTS.display,
+        size: 20,
+        color: c.textPrimary,
+      },
+      x: 0,
+      xanchor: 'left' as const,
+    },
+    xaxis: {
+      gridcolor: c.divider,
+      linecolor: c.border,
+      tickfont: { size: 14, color: c.textMuted },
+      showgrid: false,
+      zeroline: false,
+    },
+    yaxis: {
+      gridcolor: c.border,
+      linecolor: 'rgba(0,0,0,0)',
+      tickfont: { size: 14, color: c.textMuted },
+      showgrid: true,
+      gridwidth: 1,
+      zeroline: false,
+    },
+    legend: {
+      bgcolor: 'rgba(0,0,0,0)',
+      font: { color: c.textSecondary, size: 11 },
+      orientation: 'h' as const,
+      yanchor: 'bottom' as const,
+      y: 1.02,
+      xanchor: 'left' as const,
+      x: 0,
+    },
+    margin: { t: 60, r: 24, b: 48, l: 60 },
+    hoverlabel: {
+      bgcolor: c.cardElevated,
+      font: { color: c.textPrimary, family: FONTS.body },
+      bordercolor: c.borderStrong,
+    },
+  };
+}
 
 // FIRE Goal - hardcoded as in Python version
 export const FIRE_GOAL = new Decimal('4250000');

@@ -35,6 +35,26 @@
   --font-body: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
+/* Light mode - Ivory Ledger */
+[data-theme='light'] {
+  --color-background: #f5f2eb;
+  --color-card: #fafaf5;
+  --color-card-elevated: #ffffff;
+  --color-text-primary: #1a1714;
+  --color-text-secondary: #6b6560;
+  --color-text-muted: #9b918a;
+  --color-accent: #b07a1a;
+  --color-accent-light: #c99027;
+  --color-accent-glow: rgba(176, 122, 26, 0.1);
+  --color-positive: #1e7a45;
+  --color-positive-bg: rgba(30, 122, 69, 0.08);
+  --color-negative: #b83232;
+  --color-negative-bg: rgba(184, 50, 50, 0.08);
+  --color-border: #ddd8ce;
+  --color-border-strong: #c5beb4;
+  --color-divider: #eae5dc;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -45,4 +65,7 @@ body {
   font-family: var(--font-body);
   background-color: var(--color-background);
   color: var(--color-text-primary);
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease;
 }

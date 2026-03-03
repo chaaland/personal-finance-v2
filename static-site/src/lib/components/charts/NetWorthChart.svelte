@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import Plotly from 'plotly.js-dist-min';
-  import { COLORS, CHART_TEMPLATE, FIRE_GOAL } from '$lib/theme';
+  import { getColors, getChartTemplate, FIRE_GOAL } from '$lib/theme';
+  import { theme } from '$lib/stores/theme.svelte';
   import type { FireProjectionSeries } from '$lib/data/types';
   import type { CombinedNetworth } from '$lib/data/types';
 
@@ -22,12 +23,14 @@
 
   const hasData = $derived(data.historical.length > 0);
 
-  function renderChart() {
+  function renderChart(isDark: boolean) {
     if (!chartElement) return;
+    const colors = getColors(isDark);
+    const template = getChartTemplate(isDark);
 
     if (!hasData) {
       const layout: Partial<Plotly.Layout> = {
-        ...CHART_TEMPLATE,
+        ...template,
         title: 'Net Worth Over Time',
         annotations: [
           {
@@ -37,7 +40,7 @@
             x: 0.5,
             y: 0.5,
             showarrow: false,
-            font: { size: 14, color: COLORS.textSecondary },
+            font: { size: 14, color: colors.textSecondary },
           },
         ],
         height: 400,
@@ -56,9 +59,9 @@
       name: 'Total',
       type: 'scatter',
       mode: 'lines',
-      line: { color: COLORS.chart1, width: 2.5 },
+      line: { color: colors.chart1, width: 2.5 },
       fill: 'tozeroy',
-      fillcolor: 'rgba(212, 168, 83, 0.12)',
+      fillcolor: colors.accentGlow,
       hovertemplate: '$%{y:,.0f}<extra></extra>',
     });
 
@@ -69,7 +72,7 @@
       name: 'US',
       type: 'scatter',
       mode: 'lines',
-      line: { color: COLORS.chart2, width: 1.5, dash: 'dot' },
+      line: { color: colors.chart2, width: 1.5, dash: 'dot' },
       hovertemplate: '$%{y:,.0f}<extra></extra>',
     });
 
@@ -80,7 +83,7 @@
       name: 'UK',
       type: 'scatter',
       mode: 'lines',
-      line: { color: COLORS.chart3, width: 1.5, dash: 'dot' },
+      line: { color: colors.chart3, width: 1.5, dash: 'dot' },
       hovertemplate: '$%{y:,.0f}<extra></extra>',
     });
 
@@ -92,7 +95,7 @@
         name: 'Projected',
         type: 'scatter',
         mode: 'lines',
-        line: { color: COLORS.chart1, width: 2, dash: 'dash' },
+        line: { color: colors.chart1, width: 2, dash: 'dash' },
         hovertemplate: '$%{y:,.0f} (projected)<extra></extra>',
       });
     }
@@ -111,27 +114,27 @@
       name: 'FIRE Target',
       type: 'scatter',
       mode: 'lines',
-      line: { color: COLORS.accent, width: 2, dash: 'dot' },
+      line: { color: colors.accent, width: 2, dash: 'dot' },
       hovertemplate: 'FIRE Target: $%{y:,.0f}<extra></extra>',
     });
 
     const layout: Partial<Plotly.Layout> = {
-      ...CHART_TEMPLATE,
+      ...template,
       title: 'Net Worth Over Time',
       xaxis: {
-        ...CHART_TEMPLATE.xaxis,
+        ...template.xaxis,
         title: '',
       },
       yaxis: {
-        ...CHART_TEMPLATE.yaxis,
+        ...template.yaxis,
         title: '',
         tickprefix: '$',
       },
       height: 400,
       hovermode: 'x unified',
       legend: {
-        ...CHART_TEMPLATE.legend,
-        font: { ...CHART_TEMPLATE.legend.font, size: 13 },
+        ...template.legend,
+        font: { ...template.legend.font, size: 13 },
       },
       margin: { t: 80, r: 24, b: 48, l: 60 },
     };
@@ -141,7 +144,7 @@
 
   $effect(() => {
     if (chartElement && data) {
-      renderChart();
+      renderChart(theme.isDark);
     }
   });
 </script>

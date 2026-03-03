@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import Plotly from 'plotly.js-dist-min';
-  import { COLORS, CHART_TEMPLATE } from '$lib/theme';
+  import { getColors, getChartTemplate } from '$lib/theme';
+  import { theme } from '$lib/stores/theme.svelte';
   import type { MonthlySpendingRow } from '$lib/data/types';
 
   interface Props {
@@ -20,12 +21,14 @@
 
   const hasData = $derived(data.length > 0);
 
-  function renderChart() {
+  function renderChart(isDark: boolean) {
     if (!chartElement) return;
+    const colors = getColors(isDark);
+    const template = getChartTemplate(isDark);
 
     if (!hasData) {
       const layout: Partial<Plotly.Layout> = {
-        ...CHART_TEMPLATE,
+        ...template,
         title: 'Monthly Spending',
         annotations: [
           {
@@ -35,7 +38,7 @@
             x: 0.5,
             y: 0.5,
             showarrow: false,
-            font: { size: 14, color: COLORS.textSecondary },
+            font: { size: 14, color: colors.textSecondary },
           },
         ],
         height: 400,
@@ -56,7 +59,7 @@
       type: 'scatter',
       mode: 'lines',
       name: 'Monthly',
-      line: { color: COLORS.chart1, width: 1, dash: 'dot' },
+      line: { color: colors.chart1, width: 1, dash: 'dot' },
       opacity: 0.5,
       hovertemplate: '%{x|%b %Y}<br>Monthly: $%{y:,.0f}<extra></extra>',
     };
@@ -68,21 +71,21 @@
       type: 'scatter',
       mode: 'lines',
       name: '4-Month Median',
-      line: { color: COLORS.chart1, width: 2.5 },
+      line: { color: colors.chart1, width: 2.5 },
       fill: 'tozeroy',
-      fillcolor: 'rgba(212, 168, 83, 0.12)',
+      fillcolor: colors.accentGlow,
       hovertemplate: '%{x|%b %Y}<br>Median: $%{y:,.0f}<extra></extra>',
     };
 
     const layout: Partial<Plotly.Layout> = {
-      ...CHART_TEMPLATE,
+      ...template,
       title: 'Monthly Spending',
       xaxis: {
-        ...CHART_TEMPLATE.xaxis,
+        ...template.xaxis,
         title: '',
       },
       yaxis: {
-        ...CHART_TEMPLATE.yaxis,
+        ...template.yaxis,
         title: '',
         tickprefix: '$',
       },
@@ -92,7 +95,7 @@
         y: 1.02,
         xanchor: 'left',
         x: 0,
-        font: { size: 13, color: COLORS.textSecondary },
+        font: { size: 13, color: colors.textSecondary },
         bgcolor: 'rgba(0,0,0,0)',
       },
       margin: { t: 80, r: 24, b: 48, l: 60 },
@@ -105,7 +108,7 @@
 
   $effect(() => {
     if (chartElement && data) {
-      renderChart();
+      renderChart(theme.isDark);
     }
   });
 </script>

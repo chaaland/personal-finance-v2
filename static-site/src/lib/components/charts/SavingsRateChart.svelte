@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import Plotly from 'plotly.js-dist-min';
-  import { COLORS, CHART_TEMPLATE } from '$lib/theme';
+  import { getColors, getChartTemplate } from '$lib/theme';
+  import { theme } from '$lib/stores/theme.svelte';
   import type { SavingsRateByYear } from '$lib/data/types';
 
   interface Props {
@@ -20,12 +21,14 @@
 
   const hasData = $derived(data.length > 0);
 
-  function renderChart() {
+  function renderChart(isDark: boolean) {
     if (!chartElement) return;
+    const colors = getColors(isDark);
+    const template = getChartTemplate(isDark);
 
     if (!hasData) {
       const layout: Partial<Plotly.Layout> = {
-        ...CHART_TEMPLATE,
+        ...template,
         title: 'Savings Rate by Year',
         annotations: [
           {
@@ -35,7 +38,7 @@
             x: 0.5,
             y: 0.5,
             showarrow: false,
-            font: { size: 14, color: COLORS.textSecondary },
+            font: { size: 14, color: colors.textSecondary },
           },
         ],
         height: 400,
@@ -49,30 +52,30 @@
     const rates = data.map((row) => row.savingsRate);
 
     // Conditional colors: positive = green, negative = red
-    const colors = rates.map((rate) => (rate >= 0 ? COLORS.positive : COLORS.negative));
+    const barColors = rates.map((rate) => (rate >= 0 ? colors.positive : colors.negative));
 
     const trace: Partial<Plotly.PlotData> = {
       x: years,
       y: rates,
       type: 'bar',
-      marker: { color: colors },
+      marker: { color: barColors },
       text: rates.map((r) => `${r.toFixed(1)}%`),
       textposition: 'outside',
-      textfont: { size: 14, color: COLORS.textSecondary },
+      textfont: { size: 14, color: colors.textSecondary },
       hovertemplate: '%{x}<br>%{y:.1f}%<extra></extra>',
     };
 
     const layout: Partial<Plotly.Layout> = {
-      ...CHART_TEMPLATE,
+      ...template,
       title: 'Savings Rate by Year',
       xaxis: {
-        ...CHART_TEMPLATE.xaxis,
+        ...template.xaxis,
         title: '',
         tickmode: 'linear',
         dtick: 1,
       },
       yaxis: {
-        ...CHART_TEMPLATE.yaxis,
+        ...template.yaxis,
         title: '',
         ticksuffix: '%',
         range: [0, 100],
@@ -87,7 +90,7 @@
 
   $effect(() => {
     if (chartElement && data) {
-      renderChart();
+      renderChart(theme.isDark);
     }
   });
 </script>

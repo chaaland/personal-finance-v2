@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import Plotly from 'plotly.js-dist-min';
-  import { COLORS, CHART_TEMPLATE } from '$lib/theme';
+  import { getColors, getChartTemplate } from '$lib/theme';
+  import { theme } from '$lib/stores/theme.svelte';
   import type { YoyNetworthChange } from '$lib/data/types';
 
   interface Props {
@@ -20,12 +21,14 @@
 
   const hasData = $derived(data.length > 0);
 
-  function renderChart() {
+  function renderChart(isDark: boolean) {
     if (!chartElement) return;
+    const colors = getColors(isDark);
+    const template = getChartTemplate(isDark);
 
     if (!hasData) {
       const layout: Partial<Plotly.Layout> = {
-        ...CHART_TEMPLATE,
+        ...template,
         title: 'Year-over-Year Change',
         annotations: [
           {
@@ -35,7 +38,7 @@
             x: 0.5,
             y: 0.5,
             showarrow: false,
-            font: { size: 14, color: COLORS.textSecondary },
+            font: { size: 14, color: colors.textSecondary },
           },
         ],
         height: 300,
@@ -47,7 +50,7 @@
 
     const years = data.map((row) => row.year);
     const changes = data.map((row) => row.change);
-    const colors = changes.map((c) => (c >= 0 ? COLORS.positive : COLORS.negative));
+    const barColors = changes.map((c) => (c >= 0 ? colors.positive : colors.negative));
     const textLabels = changes.map((c) => {
       const sign = c >= 0 ? '+' : '';
       return `${sign}$${(c / 1000).toFixed(0)}K`;
@@ -60,24 +63,24 @@
       x: years,
       y: changes,
       type: 'bar',
-      marker: { color: colors },
+      marker: { color: barColors },
       text: textLabels,
       textposition: 'outside',
-      textfont: { size: 14, color: COLORS.textSecondary },
+      textfont: { size: 14, color: colors.textSecondary },
       hovertemplate: '%{x}<br>$%{y:,.0f}<extra></extra>',
     };
 
     const layout: Partial<Plotly.Layout> = {
-      ...CHART_TEMPLATE,
+      ...template,
       title: 'Year-over-Year Change',
       xaxis: {
-        ...CHART_TEMPLATE.xaxis,
+        ...template.xaxis,
         title: '',
         tickmode: 'linear',
         dtick: 1,
       },
       yaxis: {
-        ...CHART_TEMPLATE.yaxis,
+        ...template.yaxis,
         title: '',
         tickprefix: '$',
         range: [minVal < 0 ? minVal * 1.15 : 0, maxVal * 1.15],
@@ -91,7 +94,7 @@
 
   $effect(() => {
     if (chartElement && data) {
-      renderChart();
+      renderChart(theme.isDark);
     }
   });
 </script>

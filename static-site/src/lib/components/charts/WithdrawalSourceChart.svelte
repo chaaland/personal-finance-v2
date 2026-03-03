@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import Plotly from 'plotly.js-dist-min';
-  import { COLORS, CHART_TEMPLATE } from '$lib/theme';
+  import { getColors, getChartTemplate } from '$lib/theme';
+  import { theme } from '$lib/stores/theme.svelte';
   import type { RetirementDrawdownRow, AccountType } from '$lib/data/types';
   import { WITHDRAWAL_ORDER } from '$lib/transforms/fire';
 
@@ -34,12 +35,14 @@
 
   const hasData = $derived(data.length > 0);
 
-  function renderChart() {
+  function renderChart(isDark: boolean) {
     if (!chartElement) return;
+    const colors = getColors(isDark);
+    const template = getChartTemplate(isDark);
 
     if (!hasData) {
       const layout: Partial<Plotly.Layout> = {
-        ...CHART_TEMPLATE,
+        ...template,
         title: 'Annual Retirement Income by Source',
         annotations: [
           {
@@ -49,7 +52,7 @@
             x: 0.5,
             y: 0.5,
             showarrow: false,
-            font: { size: 14, color: COLORS.textSecondary },
+            font: { size: 14, color: colors.textSecondary },
           },
         ],
         height: 450,
@@ -81,14 +84,14 @@
     }
 
     const layout: Partial<Plotly.Layout> = {
-      ...CHART_TEMPLATE,
+      ...template,
       title: { text: 'Annual Retirement Income by Source', y: 0.98, yanchor: 'top' },
       xaxis: {
-        ...CHART_TEMPLATE.xaxis,
+        ...template.xaxis,
         title: 'Age',
       },
       yaxis: {
-        ...CHART_TEMPLATE.yaxis,
+        ...template.yaxis,
         title: '',
         tickprefix: '$',
       },
@@ -102,7 +105,7 @@
         y: 1.12,
         xanchor: 'left',
         x: 0,
-        font: { size: 12, color: COLORS.textSecondary },
+        font: { size: 12, color: colors.textSecondary },
       },
     };
 
@@ -111,7 +114,7 @@
 
   $effect(() => {
     if (chartElement && data) {
-      renderChart();
+      renderChart(theme.isDark);
     }
   });
 </script>

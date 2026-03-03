@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import Plotly from 'plotly.js-dist-min';
-  import { COLORS, CHART_TEMPLATE } from '$lib/theme';
+  import { getColors, getChartTemplate } from '$lib/theme';
+  import { theme } from '$lib/stores/theme.svelte';
   import type { SpendingByYear } from '$lib/data/types';
 
   interface Props {
@@ -20,12 +21,14 @@
 
   const hasData = $derived(data.length > 0);
 
-  function renderChart() {
+  function renderChart(isDark: boolean) {
     if (!chartElement) return;
+    const colors = getColors(isDark);
+    const template = getChartTemplate(isDark);
 
     if (!hasData) {
       const layout: Partial<Plotly.Layout> = {
-        ...CHART_TEMPLATE,
+        ...template,
         title: 'Annual Spending',
         annotations: [
           {
@@ -35,7 +38,7 @@
             x: 0.5,
             y: 0.5,
             showarrow: false,
-            font: { size: 14, color: COLORS.textSecondary },
+            font: { size: 14, color: colors.textSecondary },
           },
         ],
         height: 400,
@@ -53,24 +56,24 @@
       x: years,
       y: values,
       type: 'bar',
-      marker: { color: COLORS.chart1 },
+      marker: { color: colors.chart1 },
       text: values.map((v) => `$${v.toLocaleString('en-US', { maximumFractionDigits: 0 })}`),
       textposition: 'outside',
-      textfont: { size: 14, color: COLORS.textSecondary },
+      textfont: { size: 14, color: colors.textSecondary },
       hovertemplate: '%{x}<br>$%{y:,.0f}<extra></extra>',
     };
 
     const layout: Partial<Plotly.Layout> = {
-      ...CHART_TEMPLATE,
+      ...template,
       title: 'Annual Spending',
       xaxis: {
-        ...CHART_TEMPLATE.xaxis,
+        ...template.xaxis,
         title: '',
         tickmode: 'linear',
         dtick: 1,
       },
       yaxis: {
-        ...CHART_TEMPLATE.yaxis,
+        ...template.yaxis,
         title: '',
         tickprefix: '$',
         range: [0, maxValue * 1.15],
@@ -85,7 +88,7 @@
 
   $effect(() => {
     if (chartElement && data) {
-      renderChart();
+      renderChart(theme.isDark);
     }
   });
 </script>

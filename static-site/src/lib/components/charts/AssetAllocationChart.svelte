@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import Plotly from 'plotly.js-dist-min';
-  import { COLORS, CHART_TEMPLATE } from '$lib/theme';
+  import { getColors, getChartTemplate } from '$lib/theme';
+  import { theme } from '$lib/stores/theme.svelte';
 
   interface AllocationData {
     label: string;
@@ -17,19 +18,6 @@
 
   let chartElement: HTMLDivElement;
 
-  // Color palette for pie/donut charts - muted, sophisticated tones
-  const CHART_COLORS = [
-    COLORS.chart1, // Burnished gold
-    COLORS.chart2, // Slate blue
-    COLORS.chart3, // Sage green
-    COLORS.chart4, // Terracotta
-    COLORS.chart5, // Muted lavender
-    COLORS.chart6, // Terracotta
-    COLORS.chart7, // Muted teal
-    COLORS.chart8, // Cool slate
-    COLORS.chart9, // Muted ochre
-  ];
-
   onDestroy(() => {
     if (chartElement) {
       Plotly.purge(chartElement);
@@ -38,12 +26,27 @@
 
   const hasData = $derived(data.length > 0);
 
-  function renderChart() {
+  function renderChart(isDark: boolean) {
     if (!chartElement) return;
+    const colors = getColors(isDark);
+    const template = getChartTemplate(isDark);
+
+    // Color palette for pie/donut charts - muted, sophisticated tones
+    const CHART_COLORS = [
+      colors.chart1,
+      colors.chart2,
+      colors.chart3,
+      colors.chart4,
+      colors.chart5,
+      colors.chart6,
+      colors.chart7,
+      colors.chart8,
+      colors.chart9,
+    ];
 
     if (!hasData) {
       const layout: Partial<Plotly.Layout> = {
-        ...CHART_TEMPLATE,
+        ...template,
         title: title,
         annotations: [
           {
@@ -53,7 +56,7 @@
             x: 0.5,
             y: 0.5,
             showarrow: false,
-            font: { size: 14, color: COLORS.textSecondary },
+            font: { size: 14, color: colors.textSecondary },
           },
         ],
         height: 300,
@@ -77,13 +80,13 @@
       marker: { colors: CHART_COLORS.slice(0, labels.length) },
       textinfo: 'label+percent',
       textposition: 'outside',
-      textfont: { size: 10, color: COLORS.textSecondary },
+      textfont: { size: 10, color: colors.textSecondary },
       hovertemplate: '<b>%{label}</b><br>$%{value:,.0f}<br>%{percent}<extra></extra>',
       pull: Array(labels.length).fill(0.02),
     };
 
     const layout: Partial<Plotly.Layout> = {
-      ...CHART_TEMPLATE,
+      ...template,
       title: title,
       showlegend: false,
       height: 300,
@@ -95,7 +98,7 @@
 
   $effect(() => {
     if (chartElement && data) {
-      renderChart();
+      renderChart(theme.isDark);
     }
   });
 </script>
