@@ -1,16 +1,12 @@
 # Personal Finance Dashboard
 
-Personal finance tracking and retirement planning for US and UK accounts. Two implementations exist:
+Personal finance tracking and retirement planning for US and UK accounts.
 
-| | Python/Dash (Original) | Static Site (New) |
-|---|---|---|
-| **Location** | `src/personal_finance/` | `static-site/` |
-| **Run** | `uv run finance-dashboard` | `cd static-site && npm run dev` |
-| **Hosting** | Local server | GitHub Pages |
+- **Location**: `static-site/`
+- **Run**: `cd static-site && npm run dev`
+- **Hosting**: GitHub Pages
 
 ## Tech Stack
-
-### Static Site (Active Development)
 
 - **Framework**: Svelte 5 + Vite + TypeScript
 - **Data Processing**: DuckDB-WASM (SQL in browser)
@@ -18,30 +14,13 @@ Personal finance tracking and retirement planning for US and UK accounts. Two im
 - **Precision**: decimal.js for calculations, DuckDB `DOUBLE` for storage
 - **Build**: `npm run build` outputs to `dist/`
 
-### Python/Dash (Reference)
-
-- **Package Manager**: `uv`
-- **Framework**: Dash with Bootstrap
-- **Data Processing**: Polars (NEVER pandas)
-- **Charts**: Plotly
-
 ## Code Style
-
-### TypeScript/Svelte (static-site/)
 
 - Use TypeScript strict mode
 - Use `decimal.js` for all currency calculations
 - SQL queries go in `src/lib/transforms/` files
 - Svelte components use `.svelte` extension
 - Format: `npm run format` (Prettier)
-
-### Python (src/personal_finance/)
-
-- Format: `uv run black . && uv run isort .` (line length 120)
-- DataFrame variables: suffix with `_df` (e.g., `transactions_df`)
-- Dictionary variables: `key_to_value` pattern (e.g., `account_to_balance`)
-- Polars expressions: suffix with `_col` (e.g., `amount_col = pl.col("amount")`)
-- Use `pl.Decimal` for currency
 
 ## Git Workflow
 
@@ -69,8 +48,6 @@ Use placeholder/mock data in examples and tests. If sensitive data is accidental
 
 ## Project Structure
 
-### Static Site
-
 ```text
 static-site/
 ├── src/
@@ -96,17 +73,6 @@ static-site/
 └── package.json
 ```
 
-### Python (Reference)
-
-```text
-src/personal_finance/
-├── app.py              # Dash entry point
-├── theme.py            # Styling (port to static-site/src/lib/theme.ts)
-├── components/         # UI components (port to Svelte)
-├── transforms/         # Data logic (port to SQL + TypeScript)
-└── data/loader.py      # Data loading
-```
-
 ## Dashboard Tabs
 
 1. **Summary**: Net worth, spending, YoY comparisons
@@ -115,9 +81,8 @@ src/personal_finance/
 4. **Spending**: Spending patterns, savings rate
 5. **FIRE**: Retirement projections and simulations
 
-## Migration Notes
+## Notes
 
-- See `MIGRATION_PLAN.md` for detailed implementation phases
 - FIRE goal is hardcoded at $4,250,000
 - Excel upload only (7 sheets) - no persistence
-- LAD regression implemented in JavaScript (see migration plan)
+- LAD regression implemented in JavaScript (`static-site/src/lib/transforms/fire.ts`)

@@ -73,8 +73,6 @@ All `Conversion` columns should contain the USD exchange rate at the time of the
 
 ## Running Locally
 
-### Static Site (active development)
-
 ```bash
 cd static-site
 npm install
@@ -88,15 +86,6 @@ To build for production:
 ```bash
 npm run build   # outputs to static-site/dist/
 ```
-
-### Python/Dash (original reference implementation)
-
-```bash
-uv sync
-uv run finance-dashboard
-```
-
-Then open [http://127.0.0.1:8050](http://127.0.0.1:8050).
 
 ---
 

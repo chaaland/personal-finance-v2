@@ -1,4 +1,24 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="6" fill="#0D0D0F"/>
-  <text x="16" y="23" font-family="Georgia, serif" font-size="20" font-weight="700" fill="#D4A853" text-anchor="middle">$</text>
+  <defs>
+    <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#E5C06E"/>
+      <stop offset="50%" style="stop-color:#D4A853"/>
+      <stop offset="100%" style="stop-color:#B8923D"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Dark background with subtle rounded corners -->
+  <rect width="32" height="32" rx="4" fill="#0D0D0F"/>
+
+  <!-- Subtle gold glow effect -->
+  <rect x="1" y="1" width="30" height="30" rx="3" fill="none" stroke="rgba(212,168,83,0.15)" stroke-width="1"/>
+
+  <!-- Elegant serif "F" in burnished gold -->
+  <text x="16" y="24"
+        font-family="Georgia, 'Times New Roman', serif"
+        font-size="22"
+        font-weight="600"
+        fill="url(#goldGradient)"
+        text-anchor="middle"
+        letter-spacing="-0.5">F</text>
 </svg>
