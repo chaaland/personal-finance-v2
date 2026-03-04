@@ -87,10 +87,10 @@ function median(arr: number[]): number {
 }
 
 /**
- * Brent's method for finding the minimum of a unimodal function.
+ * Golden section search for finding the minimum of a unimodal function.
  *
- * Combines golden section search, parabolic interpolation, and bisection
- * for superlinear convergence. Matches scipy.optimize.minimize_scalar behavior.
+ * Shrinks the bracket by the golden ratio (~0.618) per iteration, reusing one
+ * function evaluation each step.
  *
  * @param f Function to minimize
  * @param a Lower bound
@@ -99,165 +99,93 @@ function median(arr: number[]): number {
  * @param maxIter Maximum iterations
  * @returns x value that minimizes f
  */
-function brentMinimize(
+function goldenSectionSearch(
   f: (x: number) => number,
   a: number,
   b: number,
   tol: number = 1e-8,
   maxIter: number = 500
 ): number {
-  const golden = 0.3819660112501051; // (3 - sqrt(5)) / 2
+  const phi = (Math.sqrt(5) - 1) / 2; // ≈ 0.618
 
-  let x = a + golden * (b - a);
-  let w = x;
-  let v = x;
-  let fx = f(x);
-  let fw = fx;
-  let fv = fx;
-
-  let d = 0;
-  let e = 0;
+  let L = b - a;
+  let x1 = b - phi * L;
+  let x2 = a + phi * L;
+  let f1 = f(x1);
+  let f2 = f(x2);
 
   for (let iter = 0; iter < maxIter; iter++) {
-    const midpoint = 0.5 * (a + b);
-    const tol1 = tol * Math.abs(x) + 1e-10;
-    const tol2 = 2 * tol1;
+    if (b - a < tol) break;
 
-    // Check for convergence
-    if (Math.abs(x - midpoint) <= tol2 - 0.5 * (b - a)) {
-      return x;
-    }
-
-    let useParabolic = false;
-    let p = 0;
-    let q = 0;
-    let r = 0;
-
-    // Try parabolic interpolation
-    if (Math.abs(e) > tol1) {
-      r = (x - w) * (fx - fv);
-      q = (x - v) * (fx - fw);
-      p = (x - v) * q - (x - w) * r;
-      q = 2 * (q - r);
-
-      if (q > 0) {
-        p = -p;
-      } else {
-        q = -q;
-      }
-
-      r = e;
-      e = d;
-
-      // Check if parabolic step is acceptable
-      if (Math.abs(p) < Math.abs(0.5 * q * r) && p > q * (a - x) && p < q * (b - x)) {
-        d = p / q;
-        const u = x + d;
-
-        // f must not be evaluated too close to a or b
-        if (u - a < tol2 || b - u < tol2) {
-          d = x < midpoint ? tol1 : -tol1;
-        }
-        useParabolic = true;
-      }
-    }
-
-    // Use golden section if parabolic failed
-    if (!useParabolic) {
-      e = (x < midpoint ? b : a) - x;
-      d = golden * e;
-    }
-
-    // f must not be evaluated too close to x
-    const u = Math.abs(d) >= tol1 ? x + d : x + (d > 0 ? tol1 : -tol1);
-    const fu = f(u);
-
-    // Update bounds
-    if (fu <= fx) {
-      if (u < x) {
-        b = x;
-      } else {
-        a = x;
-      }
-      v = w;
-      w = x;
-      x = u;
-      fv = fw;
-      fw = fx;
-      fx = fu;
+    if (f1 < f2) {
+      b = x2;
+      x2 = x1;
+      f2 = f1;
+      L = b - a;
+      x1 = b - phi * L;
+      f1 = f(x1);
     } else {
-      if (u < x) {
-        a = u;
-      } else {
-        b = u;
-      }
-      if (fu <= fw || w === x) {
-        v = w;
-        w = u;
-        fv = fw;
-        fw = fu;
-      } else if (fu <= fv || v === x || v === w) {
-        v = u;
-        fv = fu;
-      }
+      a = x1;
+      x1 = x2;
+      f1 = f2;
+      L = b - a;
+      x2 = a + phi * L;
+      f2 = f(x2);
     }
   }
 
-  return x;
+  return (a + b) / 2;
 }
 
 /**
- * Fit a line using Least Absolute Deviation (LAD) regression.
+ * Fit a line using Least Absolute Deviation (LAD) regression via coordinate descent.
  *
- * LAD minimizes sum of absolute residuals, making it more robust to outliers
- * than ordinary least squares which minimizes squared residuals.
+ * Alternates between two exact minimization steps:
+ *   - Slope step: fix intercept b, minimize Σ|a·xᵢ - (yᵢ - b)| via golden section
+ *     search. The optimal slope is provably bracketed by [min(zᵢ/xᵢ), max(zᵢ/xᵢ)]
+ *     where zᵢ = yᵢ - b: outside this range all residuals share the same sign so
+ *     moving toward the interval strictly decreases the objective.
+ *   - Intercept step: fix slope a, minimize Σ|b - (yᵢ - a·xᵢ)| analytically
+ *     as b = median(yᵢ - a·xᵢ).
  *
- * Uses Brent's method to find the optimal slope (matches scipy.optimize.minimize_scalar).
- *
- * @param xValues Independent variable (time in years)
+ * @param xValues Independent variable (time in years, non-negative)
  * @param yValues Dependent variable (net worth)
  * @returns Tuple of [slope, intercept]
  */
 function fitLAD(xValues: number[], yValues: number[]): [number, number] {
-  const n = xValues.length;
-  if (n < 2) {
-    return [0, 0];
+  if (xValues.length < 2) return [0, 0];
+
+  let intercept = median(yValues);
+  let slope = 0;
+
+  for (let iter = 0; iter < 50; iter++) {
+    // Slope step: minimize Σ|slope·xᵢ - zᵢ| where zᵢ = yᵢ - intercept
+    const z = yValues.map((y) => y - intercept);
+    const ratios = xValues
+      .map((x, i) => (x > 0 ? z[i] / x : null))
+      .filter((r): r is number => r !== null);
+
+    if (ratios.length > 0) {
+      const lo = Math.min(...ratios);
+      const hi = Math.max(...ratios);
+      slope =
+        lo === hi
+          ? lo
+          : goldenSectionSearch(
+              (s) => z.reduce((sum, zi, i) => sum + Math.abs(s * xValues[i] - zi), 0),
+              lo,
+              hi
+            );
+    }
+
+    // Intercept step: minimize Σ|intercept - rᵢ| = median of residuals rᵢ = yᵢ - slope·xᵢ
+    const newIntercept = median(yValues.map((y, i) => y - slope * xValues[i]));
+
+    if (Math.abs(newIntercept - intercept) < 1e-8) break;
+    intercept = newIntercept;
   }
 
-  // Objective function: sum of absolute residuals for a given slope
-  function objective(slope: number): number {
-    // For a given slope, optimal intercept is median of (y - slope*x)
-    const residuals = yValues.map((y, i) => y - slope * xValues[i]);
-    const intercept = median(residuals);
-    // Calculate sum of absolute residuals
-    return yValues.reduce(
-      (sum, y, i) => sum + Math.abs(y - (slope * xValues[i] + intercept)),
-      0
-    );
-  }
-
-  // Estimate initial bounds using OLS slope
-  const xMean = xValues.reduce((sum, x) => sum + x, 0) / n;
-  const yMean = yValues.reduce((sum, y) => sum + y, 0) / n;
-  const numerator = xValues.reduce(
-    (sum, x, i) => sum + (x - xMean) * (yValues[i] - yMean),
-    0
-  );
-  const denominator = xValues.reduce((sum, x) => sum + (x - xMean) ** 2, 0);
-  const olsSlope = denominator !== 0 ? numerator / denominator : 0;
-
-  // Search bounds around OLS estimate (matches Python implementation)
-  const lowerBound = olsSlope - Math.abs(olsSlope) * 2;
-  const upperBound = olsSlope + Math.abs(olsSlope) * 2;
-
-  // Use Brent's method to find optimal slope
-  const optimalSlope = brentMinimize(objective, lowerBound, upperBound);
-
-  // Calculate optimal intercept for the optimal slope
-  const residuals = yValues.map((y, i) => y - optimalSlope * xValues[i]);
-  const optimalIntercept = median(residuals);
-
-  return [optimalSlope, optimalIntercept];
+  return [slope, intercept];
 }
 
 /**
