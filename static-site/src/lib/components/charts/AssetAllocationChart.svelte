@@ -59,7 +59,7 @@
             font: { size: 14, color: colors.textSecondary },
           },
         ],
-        height: 300,
+        height: 380,
       };
 
       Plotly.newPlot(chartElement, [], layout, { displayModeBar: false });
@@ -89,8 +89,8 @@
       ...template,
       title: title,
       showlegend: false,
-      height: 300,
-      margin: { t: 60, r: 60, b: 40, l: 60 },
+      height: 380,
+      margin: { t: 60, r: 100, b: 60, l: 100 },
     };
 
     Plotly.newPlot(chartElement, [trace], layout, { displayModeBar: false });
@@ -108,6 +108,6 @@
 <style>
   .chart-container {
     width: 100%;
-    min-height: 300px;
+    min-height: 380px;
   }
 </style>
