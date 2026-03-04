@@ -199,9 +199,6 @@ export function getChartTemplate(isDark: boolean) {
   };
 }
 
-// FIRE Goal - hardcoded as in Python version
-export const FIRE_GOAL = new Decimal('4250000');
-
 // SWR rates for sensitivity analysis
 export const SWR_RATES = [
   new Decimal('0.03'),

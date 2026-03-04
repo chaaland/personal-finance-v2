@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
   import Decimal from 'decimal.js';
   import { ExpandableCard, FIREProgressCard, FIREDateCard } from '$lib/components/cards';
   import { SWRSensitivityChart } from '$lib/components/charts';
-  import { FIRE_GOAL, formatCurrency } from '$lib/theme';
+  import { formatCurrency } from '$lib/theme';
+  import { settings } from '$lib/stores/settings.svelte';
   import {
     getCurrentNetworth,
     getYtdNetworthChange,
@@ -69,8 +69,8 @@
   let yearsRemainingStr = $state('');
   let swrSensitivityData = $state<SwrSensitivityRow[]>([]);
 
-  // Load all metrics on mount
-  async function loadMetrics() {
+  // Load all metrics, parameterised so $effect can pass the current fireGoal
+  async function loadMetrics(fireGoal: typeof settings.fireGoal) {
     loading = true;
     error = null;
 
@@ -88,10 +88,10 @@
         Promise.all([getProjectedAnnualSpend(), getYoySpendingComparison(), getSpendingProjectionDetails()]),
         Promise.all([getCurrentYearSavingsRate(), getSavingsRateDetails()]),
         Promise.all([
-          getFireProgressPct(FIRE_GOAL),
-          getProjectedFireDate(FIRE_GOAL, 3),
+          getFireProgressPct(fireGoal),
+          getProjectedFireDate(fireGoal, 3),
           getCurrentRunwayYears(),
-          getSwrSensitivity([0.03, 0.035, 0.04, 0.045], 3, FIRE_GOAL, new Decimal('0.04')),
+          getSwrSensitivity([0.03, 0.035, 0.04, 0.045], 3, fireGoal, new Decimal('0.04')),
         ]),
       ]);
 
@@ -145,9 +145,9 @@
     }
   }
 
-  // Load metrics on component mount using onMount (not $effect to avoid infinite loop)
-  onMount(() => {
-    loadMetrics();
+  $effect(() => {
+    const fireGoal = settings.fireGoal;
+    loadMetrics(fireGoal);
   });
 </script>
 
@@ -209,7 +209,7 @@
         label="FIRE Progress"
         progressPct={fireProgress}
         currentValue={currentNetworth}
-        targetValue={FIRE_GOAL.toNumber()}
+        targetValue={settings.fireGoal.toNumber()}
         runwayYears={runwayYears}
         projectedSpend={projectedSpend}
       />

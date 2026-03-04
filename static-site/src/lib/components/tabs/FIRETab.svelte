@@ -1,12 +1,12 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
   import { PortfolioDrawdownChart, WithdrawalSourceChart } from '$lib/components/charts';
   import {
     getCurrentRunwayYears,
     getProjectedFireDate,
     getRetirementDrawdownSeries,
   } from '$lib/transforms/fire';
-  import { FIRE_GOAL, formatCurrency } from '$lib/theme';
+  import { formatCurrency } from '$lib/theme';
+  import { settings } from '$lib/stores/settings.svelte';
   import type { RetirementDrawdownRow } from '$lib/data/types';
 
   // State
@@ -21,15 +21,15 @@
   // Chart data
   let drawdownData = $state<RetirementDrawdownRow[]>([]);
 
-  async function loadData() {
+  async function loadData(fireGoal: typeof settings.fireGoal) {
     loading = true;
     error = null;
 
     try {
       const [runway, projection, drawdown] = await Promise.all([
         getCurrentRunwayYears(),
-        getProjectedFireDate(FIRE_GOAL),
-        getRetirementDrawdownSeries(FIRE_GOAL),
+        getProjectedFireDate(fireGoal),
+        getRetirementDrawdownSeries(fireGoal),
       ]);
 
       runwayYears = runway.toNumber();
@@ -57,8 +57,9 @@
     }
   }
 
-  onMount(() => {
-    loadData();
+  $effect(() => {
+    const fireGoal = settings.fireGoal;
+    loadData(fireGoal);
   });
 </script>
 
@@ -75,7 +76,7 @@
       <!-- FIRE Goal card -->
       <div class="metric-card">
         <p class="metric-label">FIRE Goal</p>
-        <p class="metric-value">{formatCurrency(FIRE_GOAL)}</p>
+        <p class="metric-value">{formatCurrency(settings.fireGoal)}</p>
       </div>
 
       <!-- Current Runway card -->

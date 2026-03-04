@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import Plotly from 'plotly.js-dist-min';
-  import { getColors, getChartTemplate, FIRE_GOAL } from '$lib/theme';
+  import { getColors, getChartTemplate } from '$lib/theme';
   import { theme } from '$lib/stores/theme.svelte';
   import type { FireProjectionSeries } from '$lib/data/types';
   import type { CombinedNetworth } from '$lib/data/types';

@@ -1,9 +1,7 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import Decimal from 'decimal.js';
   import { ExpandableCard } from '$lib/components/cards';
   import { NetWorthChart, YoYNetworthChart, AssetAllocationChart } from '$lib/components/charts';
-  import { FIRE_GOAL } from '$lib/theme';
+  import { settings } from '$lib/stores/settings.svelte';
   import {
     getCurrentNetworth,
     getYtdNetworthChange,
@@ -32,7 +30,7 @@
   let projectionData = $state<FireProjectionSeries>({
     historical: [],
     projection: [],
-    fireGoal: FIRE_GOAL.toNumber(),
+    fireGoal: settings.fireGoal.toNumber(),
   });
   let combinedData = $state<CombinedNetworth[]>([]);
   let yoyData = $state<YoyNetworthChange[]>([]);
@@ -42,7 +40,7 @@
   let assetByStock = $state<AllocationItem[]>([]);
   let assetByAccountType = $state<AllocationItem[]>([]);
 
-  async function loadMetrics() {
+  async function loadMetrics(fireGoal: typeof settings.fireGoal) {
     loading = true;
     error = null;
 
@@ -53,7 +51,7 @@
           getYtdNetworthChange(),
           getYtdNetworthDetails(),
           getCombinedNetworth(),
-          getFireProjectionSeries(FIRE_GOAL, 3, 2),
+          getFireProjectionSeries(fireGoal, 3, 2),
           getYoyNetworthChanges(),
         ]);
 
@@ -90,8 +88,9 @@
     loadAssetAllocation();
   }
 
-  onMount(() => {
-    loadMetrics();
+  $effect(() => {
+    const fireGoal = settings.fireGoal;
+    loadMetrics(fireGoal);
   });
 </script>
 
