@@ -4,6 +4,8 @@ A self-hosted personal finance dashboard for tracking net worth, income, spendin
 
 **Your financial data never leaves your browser.** Upload an Excel file, explore your finances, close the tab — nothing is stored or transmitted.
 
+![Summary](screenshots/summary-tab.png)
+
 ---
 
 ## Features
@@ -15,6 +17,29 @@ A self-hosted personal finance dashboard for tracking net worth, income, spendin
 | **Income** | Annual gross vs. net income comparison |
 | **Spending** | Monthly spending with rolling median, annual totals, savings rate by year |
 | **FIRE** | Retirement runway simulation, portfolio drawdown by account, withdrawal sources |
+
+---
+
+## Screenshots
+
+<table>
+  <tr>
+    <td><img src="screenshots/net-worth-tab.png" alt="Net Worth tab" width="480"/></td>
+    <td><img src="screenshots/fire-tab.png" alt="FIRE tab" width="480"/></td>
+  </tr>
+  <tr>
+    <td align="center"><em>Net Worth</em></td>
+    <td align="center"><em>FIRE projections</em></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/spending-tab.png" alt="Spending tab" width="480"/></td>
+    <td><img src="screenshots/summary-tab-light.png" alt="Light mode" width="480"/></td>
+  </tr>
+  <tr>
+    <td align="center"><em>Spending</em></td>
+    <td align="center"><em>Light mode</em></td>
+  </tr>
+</table>
 
 ---
 
