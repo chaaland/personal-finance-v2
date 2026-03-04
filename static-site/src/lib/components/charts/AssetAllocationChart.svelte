@@ -89,8 +89,8 @@
       ...template,
       title: title,
       showlegend: false,
-      height: 380,
-      margin: { t: 60, r: 100, b: 60, l: 100 },
+      height: 400,
+      margin: { t: 60, r: 100, b: 120, l: 100 },
     };
 
     Plotly.newPlot(chartElement, [trace], layout, { displayModeBar: false });
@@ -108,6 +108,6 @@
 <style>
   .chart-container {
     width: 100%;
-    min-height: 380px;
+    min-height: 400px;
   }
 </style>
