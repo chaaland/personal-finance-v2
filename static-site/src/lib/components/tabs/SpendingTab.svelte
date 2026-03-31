@@ -85,7 +85,7 @@
     <!-- Annual spending and savings rate charts side by side -->
     <div class="chart-row">
       <div class="chart-section half">
-        <AnnualSpendingChart data={annualData} />
+        <AnnualSpendingChart data={annualData} projectedSpend={projectedSpend} />
       </div>
       <div class="chart-section half">
         <SavingsRateChart data={savingsRateData} />
