@@ -17,16 +17,22 @@ interface CombinedSpendingRow {
  */
 export async function getCombinedSpending(): Promise<CombinedSpendingRow[]> {
   const sql = `
-    SELECT
-      dates,
-      SUM(total_usd) AS total_usd
-    FROM (
-      SELECT dates, total * conversion AS total_usd FROM us_spend
-      UNION ALL
-      SELECT dates, total * conversion AS total_usd FROM uk_spend
+    WITH combined AS (
+      SELECT dates, SUM(total * conversion) AS total_usd
+      FROM (
+        SELECT dates, total, conversion FROM us_spend
+        UNION ALL
+        SELECT dates, total, conversion FROM uk_spend
+      )
+      GROUP BY dates
+    ),
+    first_spend AS (
+      SELECT MIN(dates) AS first_date FROM combined WHERE total_usd > 0
     )
-    GROUP BY dates
-    ORDER BY dates
+    SELECT combined.dates, combined.total_usd
+    FROM combined, first_spend
+    WHERE combined.dates >= first_spend.first_date
+    ORDER BY combined.dates
   `;
 
   const rows = await query<CombinedSpendingRow>(sql);
@@ -253,13 +259,21 @@ export async function getSpendingByYear(): Promise<SpendingByYear[]> {
       SELECT dates, total * conversion AS total_usd FROM us_spend
       UNION ALL
       SELECT dates, total * conversion AS total_usd FROM uk_spend
+    ),
+    by_year AS (
+      SELECT
+        EXTRACT(YEAR FROM dates)::INTEGER AS year,
+        SUM(total_usd) AS total_usd
+      FROM combined
+      GROUP BY EXTRACT(YEAR FROM dates)
+    ),
+    first_year AS (
+      SELECT MIN(year) AS year FROM by_year WHERE total_usd > 0
     )
-    SELECT
-      EXTRACT(YEAR FROM dates)::INTEGER AS year,
-      SUM(total_usd) AS total_usd
-    FROM combined
-    GROUP BY EXTRACT(YEAR FROM dates)
-    ORDER BY year
+    SELECT by_year.year, by_year.total_usd
+    FROM by_year, first_year
+    WHERE by_year.year >= first_year.year
+    ORDER BY by_year.year
   `;
 
   const rows = await query<{ year: number; total_usd: number }>(sql);
