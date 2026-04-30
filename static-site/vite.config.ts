@@ -24,11 +24,10 @@ export default defineConfig({
     // Chunk splitting for better caching
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Separate vendor chunks for better caching
-          'plotly': ['plotly.js-dist-min'],
-          'xlsx': ['xlsx'],
-          'duckdb': ['@duckdb/duckdb-wasm'],
+        manualChunks: (id) => {
+          if (id.includes('plotly.js-dist-min')) return 'plotly';
+          if (id.includes('node_modules/xlsx')) return 'xlsx';
+          if (id.includes('@duckdb/duckdb-wasm')) return 'duckdb';
         },
       },
     },
