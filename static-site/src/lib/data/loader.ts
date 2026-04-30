@@ -124,6 +124,16 @@ function parseDate(value: string | number | Date): string {
 }
 
 /**
+ * Safely extract a number from a raw cell value, returning 0 for blank/null/NaN.
+ */
+function getNum(row: Record<string, unknown>, key: string): number {
+  const v = row[key];
+  if (v === null || v === undefined || v === '') return 0;
+  const n = typeof v === 'number' ? v : parseFloat(String(v));
+  return isNaN(n) ? 0 : n;
+}
+
+/**
  * Escape a string value for SQL insertion.
  */
 function escapeString(value: string): string {
@@ -240,6 +250,229 @@ function validateRow(
 }
 
 /**
+ * Returns true when the workbook uses the consolidated input-sheet format
+ * (US Monthly / UK Monthly / Paychecks) instead of the legacy output-sheet format.
+ */
+function isConsolidatedFormat(workbook: XLSX.WorkBook): boolean {
+  return workbook.SheetNames.includes('US Monthly');
+}
+
+/**
+ * Load US Monthly sheet into us_networth and us_spend tables.
+ * Net USD = netOverride > 0 ? netOverride : cash + taxable + rothIra + k401 + hsa
+ * Only rows where netUsd > 0 are inserted into us_networth.
+ */
+async function loadUsMonthly(
+  workbook: XLSX.WorkBook,
+  errors: LoadError[],
+  _warnings: LoadError[]
+): Promise<void> {
+  const sheet = workbook.Sheets['US Monthly'];
+  if (!sheet) {
+    errors.push({ sheet: 'US Monthly', message: 'Required sheet is missing from the Excel file' });
+    return;
+  }
+
+  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { raw: true });
+  if (rows.length === 0) {
+    errors.push({ sheet: 'US Monthly', message: 'Sheet has no data rows' });
+    return;
+  }
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const dateVal = row['Date'];
+    if (!isValidDate(dateVal)) {
+      errors.push({ sheet: 'US Monthly', row: i + 2, column: 'Date', message: `Invalid date value: "${dateVal}"` });
+      continue;
+    }
+
+    const dateSql = formatValue(dateVal, 'dates');
+
+    const cash = getNum(row, 'Cash');
+    const taxable = getNum(row, 'Taxable Brokerage');
+    const rothIra = getNum(row, 'Roth IRA');
+    const k401 = getNum(row, '401k');
+    const hsa = getNum(row, 'HSA');
+    const netOverride = getNum(row, 'Net Override');
+    const spend = getNum(row, 'US Spend');
+
+    const netUsd = netOverride > 0 ? netOverride : cash + taxable + rothIra + k401 + hsa;
+
+    if (netUsd > 0) {
+      await execute(
+        `INSERT INTO us_networth (dates, net, conversion) VALUES (${dateSql}, ${netUsd}, 1.0)`
+      );
+    }
+
+    await execute(
+      `INSERT INTO us_spend (dates, total, conversion) VALUES (${dateSql}, ${spend}, 1.0)`
+    );
+  }
+
+}
+
+/**
+ * Load UK Monthly sheet into uk_networth and uk_spend tables.
+ * Net GBP = netOverride > 0 ? netOverride : cash + etfs + pension
+ * Only rows where netGbp > 0 are inserted into uk_networth.
+ */
+async function loadUkMonthly(
+  workbook: XLSX.WorkBook,
+  _errors: LoadError[],
+  warnings: LoadError[]
+): Promise<void> {
+  const sheet = workbook.Sheets['UK Monthly'];
+  if (!sheet) {
+    warnings.push({ sheet: 'UK Monthly', message: 'Optional sheet is missing - some features may be unavailable' });
+    return;
+  }
+
+  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { raw: true });
+  if (rows.length === 0) {
+    warnings.push({ sheet: 'UK Monthly', message: 'Sheet is empty' });
+    return;
+  }
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const dateVal = row['Date'];
+    if (!isValidDate(dateVal)) {
+      warnings.push({ sheet: 'UK Monthly', row: i + 2, column: 'Date', message: `Invalid date value: "${dateVal}"` });
+      continue;
+    }
+
+    const dateSql = formatValue(dateVal, 'dates');
+
+    const cash = getNum(row, 'Cash (£)');
+    const etfs = getNum(row, 'ETFs (£)');
+    const pension = getNum(row, 'Pension (£)');
+    const netOverride = getNum(row, 'Net Override (£)');
+    const spend = getNum(row, 'UK Spend (£)');
+    const conversion = getNum(row, 'GBP/USD') || 1.0;
+
+    const netGbp = netOverride > 0 ? netOverride : cash + etfs + pension;
+
+    if (netGbp > 0) {
+      await execute(
+        `INSERT INTO uk_networth (dates, net, conversion) VALUES (${dateSql}, ${netGbp}, ${conversion})`
+      );
+    }
+
+    await execute(
+      `INSERT INTO uk_spend (dates, total, conversion) VALUES (${dateSql}, ${spend}, ${conversion})`
+    );
+  }
+}
+
+/**
+ * Load Paychecks sheet into total_comp table.
+ * Skips the "Approx Tax Reserves" column (col D) — it is for user reference only.
+ */
+async function loadPaychecks(
+  workbook: XLSX.WorkBook,
+  errors: LoadError[],
+  _warnings: LoadError[]
+): Promise<void> {
+  const sheet = workbook.Sheets['Paychecks'];
+  if (!sheet) {
+    errors.push({ sheet: 'Paychecks', message: 'Required sheet is missing from the Excel file' });
+    return;
+  }
+
+  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { raw: true });
+  if (rows.length === 0) {
+    errors.push({ sheet: 'Paychecks', message: 'Sheet has no data rows' });
+    return;
+  }
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const dateVal = row['Date'];
+    if (!isValidDate(dateVal)) {
+      errors.push({ sheet: 'Paychecks', row: i + 2, column: 'Date', message: `Invalid date value: "${dateVal}"` });
+      continue;
+    }
+
+    const dateSql = formatValue(dateVal, 'dates');
+    const gross = getNum(row, 'Gross');
+    const pensionContrib = getNum(row, 'Pension Contrib');
+    const net = getNum(row, 'Net');
+    const conversion = getNum(row, 'GBP/USD') || 1.0;
+
+    await execute(
+      `INSERT INTO total_comp (dates, gross, pension_contrib, net, conversion) VALUES (${dateSql}, ${gross}, ${pensionContrib}, ${net}, ${conversion})`
+    );
+  }
+
+}
+
+/**
+ * Load the consolidated format (US Monthly / UK Monthly / Paychecks + asset sheets).
+ * Asset allocation sheets are unchanged from the legacy path.
+ */
+async function loadConsolidatedFormat(
+  workbook: XLSX.WorkBook,
+  onProgress?: ProgressCallback
+): Promise<LoadResult> {
+  const errors: LoadError[] = [];
+  const warnings: LoadError[] = [];
+
+  const reportProgress = (progress: LoadProgress) => {
+    if (onProgress) onProgress(progress);
+  };
+
+  await createTables();
+
+  reportProgress({ phase: 'loading', currentSheet: 'US Monthly', currentIndex: 1, totalSheets: 5, message: 'Loading US Monthly (1/5)...' });
+  await loadUsMonthly(workbook, errors, warnings);
+  if (errors.length > 0) return { success: false, errors, warnings };
+
+  reportProgress({ phase: 'loading', currentSheet: 'UK Monthly', currentIndex: 2, totalSheets: 5, message: 'Loading UK Monthly (2/5)...' });
+  await loadUkMonthly(workbook, errors, warnings);
+  if (errors.length > 0) return { success: false, errors, warnings };
+
+  reportProgress({ phase: 'loading', currentSheet: 'Paychecks', currentIndex: 3, totalSheets: 5, message: 'Loading Paychecks (3/5)...' });
+  await loadPaychecks(workbook, errors, warnings);
+  if (errors.length > 0) return { success: false, errors, warnings };
+
+  // Asset allocation sheets — reuse legacy column-map logic
+  const assetMappings = SHEET_MAPPINGS.filter((m) => m.tableName.includes('asset_allocation'));
+  for (let i = 0; i < assetMappings.length; i++) {
+    const mapping = assetMappings[i];
+    reportProgress({
+      phase: 'loading',
+      currentSheet: mapping.sheetName,
+      currentIndex: 4 + i,
+      totalSheets: 5,
+      message: `Loading ${mapping.sheetName} (${4 + i}/5)...`,
+    });
+
+    const sheet = workbook.Sheets[mapping.sheetName];
+    if (!sheet) {
+      warnings.push({ sheet: mapping.sheetName, message: 'Optional sheet is missing - some features may be unavailable' });
+      continue;
+    }
+
+    const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { raw: true });
+    const filteredData = jsonData.filter((row) => parseFloat(String(row['Value'] || 0)) > 0);
+
+    for (const row of filteredData) {
+      const values = mapping.columns.map((col) => {
+        const excelCol = Object.keys(COLUMN_MAP).find((k) => COLUMN_MAP[k] === col);
+        const value = excelCol ? row[excelCol] : row[col];
+        return formatValue(value, col);
+      });
+      await execute(
+        `INSERT INTO ${mapping.tableName} (${mapping.columns.join(', ')}) VALUES (${values.join(', ')})`
+      );
+    }
+  }
+
+  return { success: errors.length === 0, errors, warnings };
+}
+
+/**
  * Load an Excel file into DuckDB.
  * @param file - The Excel file to load
  * @param onProgress - Optional callback for progress updates
@@ -262,6 +495,11 @@ export async function loadExcelFile(
     reportProgress({ phase: 'reading', message: 'Reading Excel file...' });
     const buffer = await file.arrayBuffer();
     const workbook = XLSX.read(buffer, { type: 'array', cellDates: true });
+
+    // Dispatch to consolidated loader when the new input-sheet format is detected
+    if (isConsolidatedFormat(workbook)) {
+      return loadConsolidatedFormat(workbook, onProgress);
+    }
 
     // Phase 2: Validate sheets exist
     reportProgress({ phase: 'validating', message: 'Validating file structure...' });

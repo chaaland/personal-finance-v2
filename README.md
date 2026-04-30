@@ -80,19 +80,106 @@ You will see requests only for static assets (`.js`, `.wasm`, `.css` files loade
 
 ## Data Format
 
-The dashboard expects a single Excel file (`.xlsx`) with the following sheets:
+The dashboard reads a single `.xlsx` file downloaded from a Google Sheet. The Google Sheet has two layers:
 
-| Sheet | Required Columns | Notes |
+- **Input sheets** — where you enter data each month
+- **Output sheets** — formula-driven; read by the dashboard. Do not edit these directly.
+
+### Input sheets
+
+#### `US Monthly` — one row per month (date = last day of month)
+
+| Column | Type | Notes |
 | --- | --- | --- |
-| `US Spend` | `Dates`, `Total`, `Conversion` | Monthly USD spending |
-| `UK Spend` | `Dates`, `Total`, `Conversion` | Monthly GBP spending with USD conversion |
-| `US Networth` | `Dates`, `Net`, `Conversion` | Periodic US net worth snapshots |
-| `UK Networth` | `Dates`, `Net`, `Conversion` | Periodic UK net worth snapshots |
-| `Total Comp` | `Dates`, `Gross`, `Pension Contrib`, `Net`, `Conversion` | Payslip-level income data |
-| `US Asset Allocation` | `Asset`, `Value`, `Account Type` | Current US holdings |
-| `UK Asset Allocation` | `Asset`, `Value`, `Account Type`, `Conversion` | Current UK holdings |
+| `Date` | date | Last day of the month, e.g. `2026-04-30` |
+| `Cash` | number | USD cash & savings balances |
+| `Taxable Brokerage` | number | |
+| `Roth IRA` | number | |
+| `401k` | number | |
+| `HSA` | number | |
+| `US Spend` | number | Total USD spending for the month |
+| `Net Override` | number | **Historical only (yellow).** Leave blank for new entries — `Net USD` computes from the account columns above. |
+| `Net USD` _(green)_ | formula | `=IF(Net Override > 0, Net Override, Cash + Taxable + Roth IRA + 401k + HSA)` — do not edit |
+| `Notes` | text | Optional |
 
-All `Conversion` columns should contain the USD exchange rate at the time of the row.
+#### `UK Monthly` — one row per month (date = last day of month)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `Date` | date | Last day of the month |
+| `Cash (£)` | number | GBP cash & savings |
+| `ETFs (£)` | number | |
+| `Pension (£)` | number | |
+| `UK Spend (£)` | number | Total GBP spending for the month |
+| `GBP/USD` | number | Exchange rate at month-end, e.g. `1.27` |
+| `Net Override (£)` | number | **Historical only (yellow).** Leave blank for new entries. |
+| `Net GBP` _(green)_ | formula | `=IF(Net Override > 0, Net Override, Cash + ETFs + Pension)` — do not edit |
+| `Notes` | text | Optional |
+
+#### `Paychecks` — one row per payment event (multiple rows per month are fine)
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `Date` | date | Pay date |
+| `Gross` | number | Pre-tax amount |
+| `Pension Contrib` | number | Employer + employee pension contributions |
+| `Approx Tax Reserves` | number | Estimated tax liability — for your reference only, not used by the dashboard |
+| `Net` | number | Take-home amount |
+| `GBP/USD` | number | `1.0` for USD paychecks; exchange rate for GBP paychecks |
+| `Notes` | text | Optional |
+
+#### `US Asset Allocation` and `UK Asset Allocation` — current holdings snapshot
+
+Overwrite these monthly with your current positions. They are not time-series — only the latest values are shown in the dashboard.
+
+| Column | Notes |
+| --- | --- |
+| `Account Type` | e.g. `Taxable Brokerage`, `Roth IRA`, `401k`, `UK Pension` |
+| `Asset` | Ticker or description, e.g. `VTI` |
+| `Value` | Current value in local currency |
+| `Conversion` | GBP/USD rate (`1.0` for US sheet) |
+
+---
+
+### How the dashboard reads the file
+
+The dashboard detects the consolidated format by checking for a `US Monthly` sheet and reads the five input sheets directly — no separate output sheets are needed. All derivations (net worth totals, spend totals, income columns) are computed in the browser loader at upload time.
+
+| Derived table | Source sheet | Logic |
+| --- | --- | --- |
+| `us_networth` | `US Monthly` | `Net USD = Net Override` if set, else sum of account columns; only rows where `Net USD > 0` |
+| `uk_networth` | `UK Monthly` | `Net GBP = Net Override` if set, else sum of account columns; only rows where `Net GBP > 0` |
+| `us_spend` | `US Monthly` | `US Spend` column; all rows |
+| `uk_spend` | `UK Monthly` | `UK Spend (£)` column; all rows |
+| `total_comp` | `Paychecks` | `Gross`, `Pension Contrib`, `Net`, `GBP/USD`; `Approx Tax Reserves` is skipped |
+
+All `Conversion` values are the GBP/USD exchange rate at the time of the row (`1.0` for USD-denominated rows).
+
+---
+
+### Monthly update workflow
+
+1. Open the Google Sheet in Google Drive
+2. Append one row to **`US Monthly`**: fill in account balances and US spending; leave `Net Override` blank
+3. Append one row to **`UK Monthly`**: fill in account balances, GBP spending, and the current GBP/USD rate; leave `Net Override` blank
+4. Append one or more rows to **`Paychecks`** for each payment received that month
+5. Overwrite **`US Asset Allocation`** and **`UK Asset Allocation`** with your current holdings if you want the allocation charts updated
+6. `File → Download → Microsoft Excel (.xlsx)`
+7. Upload the downloaded file to the dashboard
+
+---
+
+### Migrating from an existing file
+
+If you have a previous `PersonalFinance.xlsx`, run the migration script to produce a new file with the correct structure:
+
+```bash
+python scripts/migrate_personal_finance.py
+# reads:  data/PersonalFinance.xlsx
+# writes: data/PersonalFinance_migrated.xlsx
+```
+
+Then upload `data/PersonalFinance_migrated.xlsx` to Google Drive and convert it to Google Sheets format (`File → Save as Google Sheets`). Historical net worth totals are migrated into the `Net Override` column (highlighted yellow); per-account breakdowns are not available from historical data and default to zero.
 
 ---
 
