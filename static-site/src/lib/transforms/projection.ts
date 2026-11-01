@@ -14,6 +14,7 @@ import { query } from '$lib/data/database';
 import { getCombinedNetworth } from './networth';
 import {
   addMonths,
+  chartHorizonMonths,
   estimateAnnualSavings,
   estimateVolatility,
   impliedMonthlyReturns,
@@ -27,11 +28,6 @@ import type { FireDateEstimate, FireProjection, SwrSensitivityRow } from '$lib/d
 const SWR_RATES = [0.03, 0.035, 0.04, 0.045];
 /** The goal setting corresponds to this withdrawal rate; other rates scale it. */
 const BASE_SWR = 0.04;
-
-/** Chart horizon: 1.25 x the median months to FIRE, kept within 3-15 years (10 when unknown). */
-const MIN_CHART_MONTHS = 36;
-const MAX_CHART_MONTHS = 180;
-const DEFAULT_CHART_MONTHS = 120;
 
 async function totalsByMonth(sql: string): Promise<Record<string, number>> {
   const rows = await query<{ month: string; value: number }>(sql);
@@ -95,11 +91,7 @@ export async function getFireProjection(
   });
 
   const [main, ...bySwr] = result.hits;
-  const chartMonths =
-    main.median === null
-      ? DEFAULT_CHART_MONTHS
-      : Math.min(MAX_CHART_MONTHS, Math.max(MIN_CHART_MONTHS, Math.round(main.median * 1.25)));
-  const bands = result.bands(chartMonths);
+  const bands = result.bands(chartHorizonMonths(main.median));
 
   const swr: SwrSensitivityRow[] = SWR_RATES.map((rate, i) => ({
     swr: `${(rate * 100).toFixed(1)}%`,

@@ -173,6 +173,14 @@ export function getAccountColors(account: AccountType): { fill: string; line: st
   return { fill: `rgba(${rgb}, 0.55)`, line: `rgba(${rgb}, 0.85)` };
 }
 
+/** An rgba() color from a 6-digit hex color and an opacity. */
+export function withAlpha(hex: string, alpha: number): string {
+  const match = /^#([0-9a-f]{6})$/i.exec(hex);
+  if (!match) throw new Error(`withAlpha expects a 6-digit hex color, got "${hex}"`);
+  const value = parseInt(match[1], 16);
+  return `rgba(${(value >> 16) & 255}, ${(value >> 8) & 255}, ${value & 255}, ${alpha})`;
+}
+
 /**
  * Format a number as USD currency.
  */

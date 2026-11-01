@@ -246,3 +246,16 @@ export function simulate(params: SimulationParams): SimulationResult {
 
   return { hits, bands };
 }
+
+const MIN_CHART_MONTHS = 60;
+const MAX_CHART_MONTHS = 180;
+const DEFAULT_CHART_MONTHS = 120;
+
+/**
+ * How many months of projection to draw: a quarter beyond the median months to FIRE, but at
+ * least 5 years (so the range has room to fan out) and at most 15. 10 years when there is no median.
+ */
+export function chartHorizonMonths(medianMonths: number | null): number {
+  if (medianMonths === null) return DEFAULT_CHART_MONTHS;
+  return Math.min(MAX_CHART_MONTHS, Math.max(MIN_CHART_MONTHS, Math.round(medianMonths * 1.25)));
+}

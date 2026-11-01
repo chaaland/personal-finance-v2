@@ -1,5 +1,6 @@
 <script lang="ts">
   import PlotlyChart, { type ChartContext, type ChartSpec } from './PlotlyChart.svelte';
+  import { withAlpha } from '$lib/theme';
   import type { CombinedNetworth, NetWorthBand } from '$lib/data/types';
 
   interface Props {
@@ -14,6 +15,7 @@
   function build({ colors }: ChartContext): ChartSpec {
     const dates = combinedData.map((p) => p.dates);
     const hover = '$%{y:,.0f}<extra></extra>';
+    const edge = withAlpha(colors.accent, 0.8);
 
     return {
       traces: [
@@ -48,15 +50,16 @@
           line: { color: colors.chart3, width: 1.5, dash: 'dot' },
           hovertemplate: hover,
         },
-        // Projected 10th-90th percentile range: lower edge first, upper edge fills down to it
+        // Projected 10th-90th percentile range: lower edge first, upper edge fills down to it.
+        // Dotted edges and a firm fill keep the range visible on both light and dark themes.
         {
           x: band.dates,
           y: band.p10,
           type: 'scatter',
           mode: 'lines',
-          line: { width: 0 },
+          line: { color: edge, width: 1, dash: 'dot' },
           showlegend: false,
-          hoverinfo: 'skip',
+          hovertemplate: '$%{y:,.0f} (10th percentile)<extra></extra>',
         },
         {
           x: band.dates,
@@ -64,10 +67,10 @@
           name: 'Projected 10th–90th percentile',
           type: 'scatter',
           mode: 'lines',
-          line: { width: 0 },
+          line: { color: edge, width: 1, dash: 'dot' },
           fill: 'tonexty',
-          fillcolor: colors.accentGlow,
-          hoverinfo: 'skip',
+          fillcolor: withAlpha(colors.accent, 0.28),
+          hovertemplate: '$%{y:,.0f} (90th percentile)<extra></extra>',
         },
         // Projected median (today's dollars)
         {
