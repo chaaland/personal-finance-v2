@@ -45,16 +45,52 @@ export interface SavingsRateDetails {
   change: number;
 }
 
-export interface FireProjection {
-  fireDate: Date | null;
-  yearsToFire: number | null;
-  annualNwGrowth: number;
+/**
+ * When FIRE is reached, from the Monte Carlo projection: the median date with a 10th-90th
+ * percentile range. A date is null when too few simulated paths reach the goal within the
+ * horizon (30 years).
+ */
+export interface FireDateEstimate {
+  alreadyThere: boolean;
+  /** Only 10% of simulated paths get there sooner. */
+  earlyDate: Date | null;
+  medianDate: Date | null;
+  /** 90% of simulated paths have got there by then. */
+  lateDate: Date | null;
+  medianYears: number | null;
+  /** Share of simulated paths that reach the goal within the horizon. */
+  probability: number;
 }
 
 export interface SwrSensitivityRow {
   swr: string;
-  fireDate: Date | null;
-  yearsToFire: number | null;
+  estimate: FireDateEstimate;
+}
+
+/** What the projection assumed, shown to the user so nothing is hidden. */
+export interface ProjectionAssumptions {
+  startNetWorth: number;
+  /** Savings per year in today's dollars: the trailing 12 months of take-home minus spending. */
+  annualSavings: number;
+  expectedRealReturn: number;
+  volatility: number;
+  volatilitySource: 'data' | 'default';
+  goal: number;
+}
+
+/** Projected net worth percentiles by month (today's dollars); index 0 is today. */
+export interface NetWorthBand {
+  dates: Date[];
+  p10: number[];
+  p50: number[];
+  p90: number[];
+}
+
+export interface FireProjection {
+  assumptions: ProjectionAssumptions;
+  estimate: FireDateEstimate;
+  swr: SwrSensitivityRow[];
+  band: NetWorthBand;
 }
 
 export interface YoyNetworthChange {
@@ -69,17 +105,6 @@ export interface IncomeByYear {
   year: number;
   grossUsd: number;
   netUsd: number;
-}
-
-export interface ProjectionPoint {
-  dates: Date;
-  totalUsd: number;
-}
-
-export interface FireProjectionSeries {
-  historical: ProjectionPoint[];
-  projection: ProjectionPoint[];
-  fireGoal: number;
 }
 
 // Spending tab types

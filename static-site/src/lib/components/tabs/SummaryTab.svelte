@@ -28,22 +28,18 @@
     getSavingsRateDetails,
     formatSavingsExplanation,
   } from '$lib/transforms/savings';
-  import {
-    getFireProgressPct,
-    getProjectedFireDate,
-    getCurrentRunwayYears,
-    getSwrSensitivity,
-    formatFireDate,
-  } from '$lib/transforms/fire';
+  import { getFireProgressPct, getCurrentRunwayYears } from '$lib/transforms/fire';
+  import { getFireProjection } from '$lib/transforms/projection';
+  import { formatFireDate, formatFireRange, formatAssumptions } from '$lib/transforms/projection-format';
 
-  async function loadMetrics(fireGoal: Decimal) {
+  async function loadMetrics(fireGoal: Decimal, expectedRealReturn: number) {
     // Load everything in parallel with one outer Promise.all
     const [
       [nwValue, [nwChange, nwPct], nwDetails],
       [incomeValue, [incomeDiff, incomePct], incomeDetails],
       [spendValue, [spendDiff, spendPct], spendDetails],
       [rateValue, savingsDetails],
-      [progress, projection, runway, swrData],
+      [progress, projection, runway],
     ] = await Promise.all([
       Promise.all([getCurrentNetworth(), getYtdNetworthChange(), getYtdNetworthDetails()]),
       Promise.all([getYtdGrossIncome(), getYoyIncomeComparison(), getYtdIncomeDetails()]),
@@ -55,18 +51,10 @@
       Promise.all([getCurrentYearSavingsRate(), getSavingsRateDetails()]),
       Promise.all([
         getFireProgressPct(fireGoal),
-        getProjectedFireDate(fireGoal, 3),
+        getFireProjection(fireGoal, expectedRealReturn),
         getCurrentRunwayYears(),
-        getSwrSensitivity([0.03, 0.035, 0.04, 0.045], 3, fireGoal, new Decimal('0.04')),
       ]),
     ]);
-
-    let fireDateDetail = 'Insufficient data';
-    if (projection.yearsToFire === 0) {
-      fireDateDetail = 'Target reached!';
-    } else if (projection.fireDate !== null && projection.yearsToFire !== null) {
-      fireDateDetail = `${projection.yearsToFire.toFixed(1)} years at current pace of ${formatCurrency(projection.annualNwGrowth)}/yr`;
-    }
 
     const projectedSpend = spendValue.toNumber();
     const currentNetworth = nwValue.toNumber();
@@ -99,15 +87,15 @@
         progressPct: progress.toNumber(),
         progressSubtext: `${formatCurrency(currentNetworth)} / ${formatCurrency(fireGoal)}`,
         runwayDetail: `${runway.toNumber().toFixed(1)} years runway at ${formatCurrency(projectedSpend)}/yr spend`,
-        dateStr: formatFireDate(projection),
-        dateDetail: fireDateDetail,
+        dateStr: formatFireDate(projection.estimate),
+        dateDetail: `${formatFireRange(projection.estimate)}. ${formatAssumptions(projection.assumptions)}.`,
       },
-      swrData,
+      swrData: projection.swr,
     };
   }
 
-  // Reloads (and shows the loading state) whenever the FIRE goal changes
-  const metrics = $derived(loadMetrics(settings.fireGoal));
+  // Reloads (and shows the loading state) whenever the FIRE goal or expected return changes
+  const metrics = $derived(loadMetrics(settings.fireGoal, settings.expectedRealReturn));
 </script>
 
 <div class="summary-tab">

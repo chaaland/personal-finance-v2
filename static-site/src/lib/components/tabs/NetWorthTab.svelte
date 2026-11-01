@@ -12,16 +12,16 @@
     getCombinedNetworth,
     getYoyNetworthChanges,
   } from '$lib/transforms/networth';
-  import { getFireProjectionSeries } from '$lib/transforms/fire';
+  import { getFireProjection } from '$lib/transforms/projection';
   import type Decimal from 'decimal.js';
 
-  async function loadData(fireGoal: Decimal) {
+  async function loadData(fireGoal: Decimal, expectedRealReturn: number) {
     const [current, [change, changePct], details, combined, projection, yoy] = await Promise.all([
       getCurrentNetworth(),
       getYtdNetworthChange(),
       getYtdNetworthDetails(),
       getCombinedNetworth(),
-      getFireProjectionSeries(fireGoal, 3, 2),
+      getFireProjection(fireGoal, expectedRealReturn),
       getYoyNetworthChanges(),
     ]);
 
@@ -36,7 +36,7 @@
     };
   }
 
-  const data = $derived(loadData(settings.fireGoal));
+  const data = $derived(loadData(settings.fireGoal, settings.expectedRealReturn));
 </script>
 
 <div class="networth-tab">
@@ -55,7 +55,11 @@
       </div>
 
       <div class="chart-section">
-        <NetWorthChart data={d.projection} combinedData={d.combined} />
+        <NetWorthChart
+          combinedData={d.combined}
+          band={d.projection.band}
+          fireGoal={d.projection.assumptions.goal}
+        />
       </div>
 
       <AssetAllocationSection />

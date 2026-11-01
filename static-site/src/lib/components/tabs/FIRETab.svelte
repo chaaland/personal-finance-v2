@@ -3,39 +3,30 @@
   import { MetricCard } from '$lib/components/cards';
   import { PortfolioDrawdownChart, WithdrawalSourceChart } from '$lib/components/charts';
   import AsyncContent from '$lib/components/AsyncContent.svelte';
-  import {
-    getCurrentRunwayYears,
-    getProjectedFireDate,
-    getRetirementDrawdownSeries,
-    formatFireDate,
-  } from '$lib/transforms/fire';
+  import { getCurrentRunwayYears, getRetirementDrawdownSeries } from '$lib/transforms/fire';
+  import { getFireProjection } from '$lib/transforms/projection';
+  import { formatFireDate, formatFireRange, formatAssumptions } from '$lib/transforms/projection-format';
   import { settings } from '$lib/stores/settings.svelte';
 
-  async function loadData(fireGoal: Decimal) {
+  async function loadData(fireGoal: Decimal, expectedRealReturn: number) {
     const [runway, projection, drawdown] = await Promise.all([
       getCurrentRunwayYears(),
-      getProjectedFireDate(fireGoal),
+      getFireProjection(fireGoal, expectedRealReturn),
       getRetirementDrawdownSeries(fireGoal),
     ]);
-
-    let yearsToFire = 'Insufficient growth data';
-    if (projection.yearsToFire === 0) {
-      yearsToFire = "You've reached your target!";
-    } else if (projection.fireDate !== null) {
-      yearsToFire = `${projection.yearsToFire?.toFixed(1)} years from now`;
-    }
 
     return {
       fireGoal: fireGoal.toNumber(),
       runway: `${runway.toNumber().toFixed(1)} years`,
-      fireDate: formatFireDate(projection),
-      yearsToFire,
+      fireDate: formatFireDate(projection.estimate),
+      fireRange: formatFireRange(projection.estimate),
+      assumptions: formatAssumptions(projection.assumptions),
       drawdown,
     };
   }
 
-  // Reloads (and shows the loading state) whenever the FIRE goal changes
-  const data = $derived(loadData(settings.fireGoal));
+  // Reloads (and shows the loading state) whenever the FIRE goal or expected return changes
+  const data = $derived(loadData(settings.fireGoal, settings.expectedRealReturn));
 </script>
 
 <div class="fire-tab">
@@ -48,8 +39,9 @@
           value={d.runway}
           subtext="if you stopped working today"
         />
-        <MetricCard label="Projected FIRE Date" value={d.fireDate} subtext={d.yearsToFire} />
+        <MetricCard label="Projected FIRE Date" value={d.fireDate} subtext={d.fireRange} />
       </div>
+      <p class="assumptions">{d.assumptions}.</p>
 
       <div class="chart-section">
         <PortfolioDrawdownChart data={d.drawdown} />
@@ -72,6 +64,12 @@
     grid-template-columns: repeat(3, 1fr);
     gap: 24px;
     margin-bottom: 24px;
+  }
+
+  .assumptions {
+    margin: -8px 0 24px 0;
+    font-size: 13px;
+    color: var(--color-text-muted);
   }
 
   @media (max-width: 768px) {

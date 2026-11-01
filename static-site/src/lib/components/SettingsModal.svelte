@@ -1,5 +1,11 @@
 <script lang="ts">
-  import { settings, FIRE_GOAL_MIN, FIRE_GOAL_MAX } from '$lib/stores/settings.svelte';
+  import {
+    settings,
+    FIRE_GOAL_MIN,
+    FIRE_GOAL_MAX,
+    EXPECTED_RETURN_MIN,
+    EXPECTED_RETURN_MAX,
+  } from '$lib/stores/settings.svelte';
   import { formatCurrency } from '$lib/theme';
 
   interface Props {
@@ -11,6 +17,8 @@
 
   const atMin = $derived(settings.fireGoal.lte(FIRE_GOAL_MIN));
   const atMax = $derived(settings.fireGoal.gte(FIRE_GOAL_MAX));
+  const returnAtMin = $derived(settings.expectedRealReturn <= EXPECTED_RETURN_MIN);
+  const returnAtMax = $derived(settings.expectedRealReturn >= EXPECTED_RETURN_MAX);
 </script>
 
 {#if open}
@@ -44,6 +52,28 @@
             onclick={() => settings.increment()}
             disabled={atMax}
             aria-label="Increase FIRE target by $250,000"
+          >+</button>
+        </div>
+      </div>
+
+      <div class="setting-row return-row">
+        <div>
+          <p class="setting-label">Expected real return</p>
+          <p class="setting-hint">After inflation. Used by the FIRE projection.</p>
+        </div>
+        <div class="stepper">
+          <button
+            class="stepper-btn"
+            onclick={() => settings.decrementReturn()}
+            disabled={returnAtMin}
+            aria-label="Decrease expected real return by 0.5 percentage points"
+          >−</button>
+          <span class="stepper-value">{(settings.expectedRealReturn * 100).toFixed(1)}%</span>
+          <button
+            class="stepper-btn"
+            onclick={() => settings.incrementReturn()}
+            disabled={returnAtMax}
+            aria-label="Increase expected real return by 0.5 percentage points"
           >+</button>
         </div>
       </div>
@@ -125,6 +155,16 @@
     text-transform: uppercase;
     letter-spacing: 0.5px;
     margin: 0;
+  }
+
+  .return-row {
+    margin-top: 20px;
+  }
+
+  .setting-hint {
+    font-size: 12px;
+    color: var(--color-text-muted);
+    margin: 4px 0 0 0;
   }
 
   .stepper {
