@@ -205,6 +205,6 @@ npm run build   # outputs to static-site/dist/
 
 The FIRE tab uses a **Least Absolute Deviation (LAD) regression** on historical net worth data to project a FIRE date. LAD is preferred over ordinary least squares because it is robust to outliers (market crashes, windfalls) that would skew an OLS fit.
 
-The projected FIRE date is calculated against a hardcoded goal of **$4,250,000** at safe withdrawal rates of 3%, 3.5%, 4%, and 4.5%.
+The projected FIRE date is calculated against your FIRE target (default **$4,250,000**; adjustable from $1M to $10M in Settings and remembered in your browser) at safe withdrawal rates of 3%, 3.5%, 4%, and 4.5%.
 
 The retirement drawdown simulation applies account-specific growth rates and models the withdrawal order across account types (taxable → tax-deferred → tax-free) to project portfolio longevity.

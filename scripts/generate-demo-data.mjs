@@ -212,11 +212,42 @@ function addSheet(name, data) {
   XLSX.utils.book_append_sheet(wb, ws, name);
 }
 
-addSheet('US Spend', generateUSSpend(months));
-addSheet('UK Spend', generateUKSpend(months));
-addSheet('US Networth', generateUSNetworth(months));
-addSheet('UK Networth', generateUKNetworth(months));
-addSheet('Total Comp', generateTotalComp(months));
+// Generate each series once (the RNG is seeded, so order matters) and reuse it below.
+const usSpend = generateUSSpend(months);
+const ukSpend = generateUKSpend(months);
+const usNetworth = generateUSNetworth(months);
+const ukNetworth = generateUKNetworth(months);
+const totalComp = generateTotalComp(months);
+
+// Input sheets in the format the dashboard loads. Net worth goes in the
+// "Net Override" columns, which exist for history without per-account balances.
+addSheet(
+  'US Monthly',
+  months.map((date, i) => ({
+    Date: date,
+    'US Spend': usSpend[i].Total,
+    'Net Override': usNetworth[i].Net,
+  }))
+);
+addSheet(
+  'UK Monthly',
+  months.map((date, i) => ({
+    Date: date,
+    'UK Spend (£)': ukSpend[i].Total,
+    'GBP/USD': ukNetworth[i].Conversion,
+    'Net Override (£)': ukNetworth[i].Net,
+  }))
+);
+addSheet(
+  'Paychecks',
+  totalComp.map(({ Dates, Gross, 'Pension Contrib': pension, Net, Conversion }) => ({
+    Date: Dates,
+    Gross,
+    'Pension Contrib': pension,
+    Net,
+    'GBP/USD': Conversion,
+  }))
+);
 addSheet('US Asset Allocation', usAssetAllocation);
 addSheet('UK Asset Allocation', ukAssetAllocation);
 
@@ -224,10 +255,8 @@ const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
 writeFileSync('demo-data.xlsx', buf);
 
 // Print summary
-const usNW = generateUSNetworth(months);
-const ukNW = generateUKNetworth(months);
-const lastUS = usNW[usNW.length - 1];
-const lastUK = ukNW[ukNW.length - 1];
+const lastUS = usNetworth[usNetworth.length - 1];
+const lastUK = ukNetworth[ukNetworth.length - 1];
 console.log('Generated demo-data.xlsx');
 console.log(`  US Networth (latest): $${lastUS.Net.toLocaleString()}`);
 console.log(`  UK Networth (latest): £${lastUK.Net.toLocaleString()} (~$${Math.round(lastUK.Net * lastUK.Conversion).toLocaleString()})`);
