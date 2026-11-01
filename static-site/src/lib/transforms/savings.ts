@@ -1,130 +1,77 @@
 /**
  * Savings rate calculations and transformations.
- * Mirrors Python transforms/savings.py
  */
 
 import Decimal from 'decimal.js';
-import { query } from '$lib/data/database';
+import { query, queryDecimal } from '$lib/data/database';
+import { formatUsd } from '$lib/theme';
 import type { SavingsRateDetails, SavingsRateByYear } from '$lib/data/types';
 
 /**
- * Get take-home pay (net + pension contrib) for current year.
+ * Year of the latest paycheck. Take-home and spending are both measured against
+ * this year so the savings rate always compares like with like.
  */
-async function getCurrentYearTakeHome(): Promise<Decimal> {
-  const sql = `
-    WITH current_year AS (
-      SELECT EXTRACT(YEAR FROM MAX(dates)) AS year FROM total_comp
-    )
-    SELECT SUM((net + pension_contrib) * conversion) AS take_home
-    FROM total_comp, current_year
-    WHERE EXTRACT(YEAR FROM dates) = current_year.year
-  `;
+const LATEST_COMP_YEAR = `(SELECT EXTRACT(YEAR FROM MAX(dates)) FROM total_comp)`;
 
-  const rows = await query<{ take_home: number }>(sql);
-  if (rows.length === 0 || rows[0].take_home === null) {
-    return new Decimal(0);
-  }
-  return new Decimal(rows[0].take_home);
+/**
+ * Get take-home pay (net + pension contrib) for the latest year, or the year
+ * `yearsBack` before it.
+ */
+function getTakeHome(yearsBack: number): Promise<Decimal> {
+  return queryDecimal(`
+    SELECT SUM((net + pension_contrib) * conversion) FROM total_comp
+    WHERE EXTRACT(YEAR FROM dates) = ${LATEST_COMP_YEAR} - ${yearsBack}
+  `);
 }
 
 /**
- * Get current year spending total.
+ * Get total spending for the latest paycheck year, or the year `yearsBack` before it.
  */
-async function getCurrentYearSpending(): Promise<Decimal> {
-  const sql = `
-    WITH combined AS (
-      SELECT dates, total * conversion AS total_usd FROM us_spend
-      UNION ALL
-      SELECT dates, total * conversion AS total_usd FROM uk_spend
-    ),
-    current_year AS (
-      SELECT EXTRACT(YEAR FROM MAX(dates)) AS year FROM combined
-    )
-    SELECT SUM(total_usd) AS spending
-    FROM combined, current_year
-    WHERE EXTRACT(YEAR FROM dates) = current_year.year
-  `;
+function getSpending(yearsBack: number): Promise<Decimal> {
+  return queryDecimal(`
+    SELECT SUM(total_usd) FROM all_spend
+    WHERE EXTRACT(YEAR FROM dates) = ${LATEST_COMP_YEAR} - ${yearsBack}
+  `);
+}
 
-  const rows = await query<{ spending: number }>(sql);
-  if (rows.length === 0 || rows[0].spending === null) {
+/**
+ * Savings rate as a percentage of take-home pay (0 when there is no take-home pay).
+ * Formula: ((Take_Home - Spending) / Take_Home) * 100
+ */
+function savingsRateOf(takeHome: Decimal, spending: Decimal): Decimal {
+  if (takeHome.isZero()) {
     return new Decimal(0);
   }
-  return new Decimal(rows[0].spending);
+  return takeHome.minus(spending).div(takeHome).mul(100);
 }
 
 /**
  * Get savings rate for current year.
- * Formula: ((Take_Home - Spending) / Take_Home) * 100
  */
 export async function getCurrentYearSavingsRate(): Promise<Decimal> {
-  const takeHome = await getCurrentYearTakeHome();
-  const spending = await getCurrentYearSpending();
-
-  if (takeHome.isZero()) {
-    return new Decimal(0);
-  }
-
-  const savings = takeHome.minus(spending);
-  return savings.div(takeHome).mul(100);
-}
-
-/**
- * Get previous year's savings rate.
- */
-async function getPreviousYearSavingsRate(): Promise<Decimal> {
-  const sql = `
-    WITH current_year AS (
-      SELECT EXTRACT(YEAR FROM MAX(dates)) AS year FROM total_comp
-    ),
-    prev_year_take_home AS (
-      SELECT SUM((net + pension_contrib) * conversion) AS take_home
-      FROM total_comp, current_year
-      WHERE EXTRACT(YEAR FROM dates) = current_year.year - 1
-    ),
-    prev_year_spending AS (
-      SELECT SUM(total_usd) AS spending
-      FROM (
-        SELECT dates, total * conversion AS total_usd FROM us_spend
-        UNION ALL
-        SELECT dates, total * conversion AS total_usd FROM uk_spend
-      ), current_year
-      WHERE EXTRACT(YEAR FROM dates) = current_year.year - 1
-    )
-    SELECT
-      COALESCE(prev_year_take_home.take_home, 0) AS take_home,
-      COALESCE(prev_year_spending.spending, 0) AS spending
-    FROM prev_year_take_home, prev_year_spending
-  `;
-
-  const rows = await query<{ take_home: number; spending: number }>(sql);
-  if (rows.length === 0 || rows[0].take_home === 0) {
-    return new Decimal(0);
-  }
-
-  const takeHome = new Decimal(rows[0].take_home);
-  const spending = new Decimal(rows[0].spending);
-  const savings = takeHome.minus(spending);
-
-  return savings.div(takeHome).mul(100);
+  const [takeHome, spending] = await Promise.all([getTakeHome(0), getSpending(0)]);
+  return savingsRateOf(takeHome, spending);
 }
 
 /**
  * Get detailed savings rate info for display.
  */
 export async function getSavingsRateDetails(): Promise<SavingsRateDetails> {
-  const takeHome = await getCurrentYearTakeHome();
-  const spending = await getCurrentYearSpending();
-  const savingsRate = await getCurrentYearSavingsRate();
-  const previousRate = await getPreviousYearSavingsRate();
-
-  const change = savingsRate.minus(previousRate);
+  const [takeHome, spending, prevTakeHome, prevSpending] = await Promise.all([
+    getTakeHome(0),
+    getSpending(0),
+    getTakeHome(1),
+    getSpending(1),
+  ]);
+  const savingsRate = savingsRateOf(takeHome, spending);
+  const previousRate = savingsRateOf(prevTakeHome, prevSpending);
 
   return {
     savingsRate: savingsRate.toNumber(),
     takeHome: takeHome.toNumber(),
     spending: spending.toNumber(),
     previousRate: previousRate.toNumber(),
-    change: change.toNumber(),
+    change: savingsRate.minus(previousRate).toNumber(),
   };
 }
 
@@ -133,7 +80,7 @@ export async function getSavingsRateDetails(): Promise<SavingsRateDetails> {
  */
 export function formatSavingsExplanation(details: SavingsRateDetails): string {
   const savings = details.takeHome - details.spending;
-  return `Saving $${savings.toLocaleString('en-US', { maximumFractionDigits: 0 })} of $${details.takeHome.toLocaleString('en-US', { maximumFractionDigits: 0 })} take-home pay (${details.previousRate.toFixed(1)}% last year)`;
+  return `Saving ${formatUsd(savings)} of ${formatUsd(details.takeHome)} take-home pay (${details.previousRate.toFixed(1)}% last year)`;
 }
 
 /**
@@ -153,11 +100,7 @@ export async function getSavingsRateByYear(): Promise<SavingsRateByYear[]> {
       SELECT
         EXTRACT(YEAR FROM dates)::INTEGER AS year,
         SUM(total_usd) AS spending
-      FROM (
-        SELECT dates, total * conversion AS total_usd FROM us_spend
-        UNION ALL
-        SELECT dates, total * conversion AS total_usd FROM uk_spend
-      )
+      FROM all_spend
       GROUP BY EXTRACT(YEAR FROM dates)
     )
     SELECT

@@ -1,13 +1,14 @@
 /**
- * Theme system ported from Python theme.py
+ * Theme system: colors, chart template, and formatters.
  * "Midnight Vault" - Swiss Banking aesthetic in dark mode
  * "Ivory Ledger" - Warm parchment aesthetic in light mode
  */
 
 import Decimal from 'decimal.js';
+import type { AccountType } from '$lib/data/types';
 
 // Color palette - Midnight Vault (Dark Mode)
-export const COLORS = {
+const COLORS = {
   // Backgrounds - Deep obsidian with warm undertones
   background: '#0D0D0F',
   card: '#18181B',
@@ -47,7 +48,7 @@ export const COLORS = {
 } as const;
 
 // Color palette - Ivory Ledger (Light Mode)
-export const LIGHT_COLORS = {
+const LIGHT_COLORS = {
   // Backgrounds - Warm parchment
   background: '#F5F2EB',
   card: '#FAFAF5',
@@ -87,65 +88,18 @@ export const LIGHT_COLORS = {
 } as const;
 
 // Typography
-export const FONTS = {
+const FONTS = {
   display: "'Playfair Display', 'Cormorant Garamond', Georgia, serif",
   body: "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif",
 } as const;
-
-// Plotly chart template - Dark and refined
-export const CHART_TEMPLATE = {
-  paper_bgcolor: COLORS.card,
-  plot_bgcolor: COLORS.card,
-  font: {
-    family: FONTS.body,
-    color: COLORS.textSecondary,
-    size: 12,
-  },
-  title: {
-    font: {
-      family: FONTS.display,
-      size: 20,
-      color: COLORS.textPrimary,
-    },
-    x: 0,
-    xanchor: 'left' as const,
-  },
-  xaxis: {
-    gridcolor: COLORS.divider,
-    linecolor: COLORS.border,
-    tickfont: { size: 14, color: COLORS.textMuted },
-    showgrid: false,
-    zeroline: false,
-  },
-  yaxis: {
-    gridcolor: COLORS.border,
-    linecolor: 'rgba(0,0,0,0)',
-    tickfont: { size: 14, color: COLORS.textMuted },
-    showgrid: true,
-    gridwidth: 1,
-    zeroline: false,
-  },
-  legend: {
-    bgcolor: 'rgba(0,0,0,0)',
-    font: { color: COLORS.textSecondary, size: 11 },
-    orientation: 'h' as const,
-    yanchor: 'bottom' as const,
-    y: 1.02,
-    xanchor: 'left' as const,
-    x: 0,
-  },
-  margin: { t: 60, r: 24, b: 48, l: 60 },
-  hoverlabel: {
-    bgcolor: COLORS.cardElevated,
-    font: { color: COLORS.textPrimary, family: FONTS.body },
-    bordercolor: COLORS.borderStrong,
-  },
-};
 
 // Theme-aware color and template factories
 export function getColors(isDark: boolean) {
   return isDark ? COLORS : LIGHT_COLORS;
 }
+
+export type ChartColors = ReturnType<typeof getColors>;
+export type ChartTemplate = ReturnType<typeof getChartTemplate>;
 
 export function getChartTemplate(isDark: boolean) {
   const c = getColors(isDark);
@@ -199,17 +153,28 @@ export function getChartTemplate(isDark: boolean) {
   };
 }
 
-// SWR rates for sensitivity analysis
-export const SWR_RATES = [
-  new Decimal('0.03'),
-  new Decimal('0.035'),
-  new Decimal('0.04'),
-  new Decimal('0.045'),
-];
+// "Stratified Wealth" palette for retirement accounts - desaturated jewel tones,
+// ordered from warm (cash/liquid) to cool (tax-advantaged growth). RGB triples.
+const ACCOUNT_RGB: Record<AccountType, string> = {
+  'UK Cash': '196, 167, 125',
+  HYSA: '251, 191, 114',
+  Coinbase: '245, 158, 89',
+  'Taxable Brokerage': '134, 182, 159',
+  'UK Pension': '124, 165, 184',
+  '401k': '116, 165, 193',
+  IRA: '147, 141, 194',
+  HSA: '99, 179, 171',
+  'Roth IRA': '176, 147, 182',
+};
+
+/** Translucent fill and stronger outline colors for an account type. */
+export function getAccountColors(account: AccountType): { fill: string; line: string } {
+  const rgb = ACCOUNT_RGB[account];
+  return { fill: `rgba(${rgb}, 0.55)`, line: `rgba(${rgb}, 0.85)` };
+}
 
 /**
  * Format a number as USD currency.
- * Matches Python theme.py format_currency()
  */
 export function formatCurrency(value: Decimal | number): string {
   const v = typeof value === 'number' ? value : value.toNumber();
@@ -223,8 +188,15 @@ export function formatCurrency(value: Decimal | number): string {
 }
 
 /**
+ * Format a number as whole US dollars with thousands separators (e.g. "$1,234,567").
+ * Use for explanatory text and chart labels; formatCurrency gives the compact form ("$1.23M").
+ */
+export function formatUsd(value: number): string {
+  return `$${value.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+}
+
+/**
  * Format a number as a percentage.
- * Matches Python theme.py format_percentage()
  */
 export function formatPercentage(value: Decimal | number): string {
   const v = typeof value === 'number' ? value : value.toNumber();
@@ -238,7 +210,6 @@ export interface ChangeDisplay {
 
 /**
  * Format a change value with appropriate styling info.
- * Matches Python theme.py format_change()
  */
 export function formatChange(
   value: Decimal | number,

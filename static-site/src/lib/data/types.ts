@@ -1,50 +1,6 @@
 /**
- * TypeScript interfaces for finance data.
- * Mirrors Python data/loader.py FinanceData dataclass.
+ * TypeScript interfaces for the results returned by the transform functions.
  */
-
-export interface SpendRow {
-  dates: Date;
-  total: number;
-  conversion: number;
-}
-
-export interface NetworthRow {
-  dates: Date;
-  net: number;
-  conversion: number;
-}
-
-export interface CompRow {
-  dates: Date;
-  gross: number;
-  pensionContrib: number;
-  net: number;
-  conversion: number;
-}
-
-export interface AssetRow {
-  asset: string;
-  value: number;
-  accountType: string;
-  conversion?: number; // UK only
-}
-
-/**
- * Container for all loaded finance data.
- * Mirrors Python FinanceData dataclass.
- */
-export interface FinanceData {
-  usSpend: SpendRow[];
-  ukSpend: SpendRow[];
-  usNetworth: NetworthRow[];
-  ukNetworth: NetworthRow[];
-  totalComp: CompRow[];
-  usAssetAllocation: AssetRow[];
-  ukAssetAllocation: AssetRow[];
-}
-
-// Transform result types
 
 export interface CombinedNetworth {
   dates: Date;
@@ -166,10 +122,4 @@ export interface RetirementDrawdownRow {
   totalBalance: number;
   withdrawal: number;
   withdrawalsByAccount: Record<AccountType, number>;
-}
-
-/** Color palette for account types in charts */
-export interface AccountPalette {
-  fill: string;
-  line: string;
 }

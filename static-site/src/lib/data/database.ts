@@ -4,6 +4,7 @@
  */
 
 import * as duckdb from '@duckdb/duckdb-wasm';
+import Decimal from 'decimal.js';
 
 let db: duckdb.AsyncDuckDB | null = null;
 let conn: duckdb.AsyncDuckDBConnection | null = null;
@@ -67,6 +68,7 @@ export async function createTables(): Promise<void> {
   const connection = await getConnection();
 
   await connection.query(`
+    DROP VIEW IF EXISTS all_spend;
     DROP TABLE IF EXISTS us_spend;
     DROP TABLE IF EXISTS uk_spend;
     DROP TABLE IF EXISTS us_networth;
@@ -119,6 +121,12 @@ export async function createTables(): Promise<void> {
       account_type VARCHAR,
       conversion DOUBLE
     );
+
+    -- US + UK spending in USD, so transforms don't each re-declare the union.
+    CREATE VIEW all_spend AS
+      SELECT dates, total * conversion AS total_usd FROM us_spend
+      UNION ALL
+      SELECT dates, total * conversion AS total_usd FROM uk_spend;
   `);
 }
 
@@ -146,6 +154,16 @@ export async function query<T>(sql: string): Promise<T[]> {
     }
     return obj as T;
   });
+}
+
+/**
+ * Run a query that yields a single numeric value (first column of the first row).
+ * A missing row or SQL NULL (e.g. SUM over no rows) becomes Decimal(0).
+ */
+export async function queryDecimal(sql: string): Promise<Decimal> {
+  const rows = await query<Record<string, number | null>>(sql);
+  const value = rows.length > 0 ? Object.values(rows[0])[0] : null;
+  return value === null || value === undefined ? new Decimal(0) : new Decimal(value);
 }
 
 /**

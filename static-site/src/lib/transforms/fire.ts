@@ -1,10 +1,13 @@
 /**
  * FIRE (Financial Independence, Retire Early) calculations.
- * Mirrors Python transforms/fire.py
  */
 
 import Decimal from 'decimal.js';
-import { getCurrentNetworth, getCombinedNetworth } from './networth';
+import {
+  getCurrentNetworth,
+  getCombinedNetworth,
+  getAssetAllocationByAccountType,
+} from './networth';
 import { getProjectedAnnualSpend, getPreviousYearSpending } from './spending';
 import type {
   FireProjection,
@@ -14,7 +17,6 @@ import type {
   RetirementDrawdownRow,
   AccountType,
 } from '$lib/data/types';
-import { query } from '$lib/data/database';
 
 /**
  * Get the best estimate of annual spending.
@@ -35,7 +37,7 @@ async function getAnnualSpendEstimate(): Promise<Decimal> {
  * @param withdrawalRate Safe withdrawal rate as decimal (e.g., 0.04 for 4%)
  * @returns FIRE number in USD
  */
-export async function getFireNumber(
+async function getFireNumber(
   withdrawalRate: Decimal = new Decimal('0.04')
 ): Promise<Decimal> {
   if (withdrawalRate.isZero()) {
@@ -198,7 +200,7 @@ function fitLAD(xValues: number[], yValues: number[]): [number, number] {
  * @param lookbackYears Number of years to look back (default 3)
  * @returns Average annual growth in USD (slope of LAD regression line)
  */
-export async function getAnnualNwGrowth(
+async function getAnnualNwGrowth(
   lookbackYears: number = 3
 ): Promise<Decimal> {
   const combined = await getCombinedNetworth();
@@ -298,6 +300,20 @@ export async function getProjectedFireDate(
 }
 
 /**
+ * Headline text for a projected FIRE date: "FIRE Ready", "Mon YYYY", or "N/A"
+ * when no date can be projected.
+ */
+export function formatFireDate(projection: FireProjection): string {
+  if (projection.yearsToFire === 0) {
+    return 'FIRE Ready';
+  }
+  if (projection.fireDate === null) {
+    return 'N/A';
+  }
+  return projection.fireDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+}
+
+/**
  * Calculate FIRE dates for different safe withdrawal rates.
  *
  * Shows how the projected FIRE date changes at different SWR percentages.
@@ -339,30 +355,6 @@ export async function getSwrSensitivity(
   }
 
   return results;
-}
-
-/**
- * Format a FIRE projection as human-readable text.
- */
-export function formatFireProjection(projection: FireProjection): string {
-  if (projection.yearsToFire === 0) {
-    return 'Already at FIRE goal!';
-  }
-
-  if (projection.yearsToFire === null) {
-    return 'Cannot project (no positive growth trend)';
-  }
-
-  if (projection.fireDate === null) {
-    return `${projection.yearsToFire.toFixed(1)} years to FIRE`;
-  }
-
-  const dateStr = projection.fireDate.toLocaleDateString('en-US', {
-    month: 'short',
-    year: 'numeric',
-  });
-
-  return `${dateStr} (${projection.yearsToFire.toFixed(1)} years)`;
 }
 
 /**
@@ -490,39 +482,15 @@ export async function getRetirementDrawdownSeries(
   retirementAge: number = 50,
   endAge: number = 95
 ): Promise<RetirementDrawdownRow[]> {
-  // Query US asset allocation grouped by account type
-  const usBalances = await query<{ account_type: string; total: number }>(`
-    SELECT account_type, SUM(value) as total
-    FROM us_asset_allocation
-    GROUP BY account_type
-  `);
+  // Current balance per account type (US + UK, in USD)
+  const accountBalances = Object.fromEntries(
+    WITHDRAWAL_ORDER.map((acct) => [acct, new Decimal(0)])
+  ) as Record<AccountType, Decimal>;
 
-  // Query UK asset allocation grouped by account type (converted to USD)
-  const ukBalances = await query<{ account_type: string; total: number }>(`
-    SELECT account_type, SUM(value * conversion) as total
-    FROM uk_asset_allocation
-    GROUP BY account_type
-  `);
-
-  // Initialize all account balances to zero
-  const accountBalances: Record<AccountType, Decimal> = {} as Record<AccountType, Decimal>;
-  for (const acct of WITHDRAWAL_ORDER) {
-    accountBalances[acct] = new Decimal(0);
-  }
-
-  // Add US balances
-  for (const row of usBalances) {
-    const acctType = row.account_type as AccountType;
-    if (WITHDRAWAL_ORDER.includes(acctType) && row.total != null && !isNaN(row.total)) {
-      accountBalances[acctType] = new Decimal(row.total);
-    }
-  }
-
-  // Add UK balances
-  for (const row of ukBalances) {
-    const acctType = row.account_type as AccountType;
-    if (WITHDRAWAL_ORDER.includes(acctType) && row.total != null && !isNaN(row.total)) {
-      accountBalances[acctType] = accountBalances[acctType].plus(row.total);
+  for (const { label, value } of await getAssetAllocationByAccountType('All')) {
+    const acctType = label as AccountType;
+    if (WITHDRAWAL_ORDER.includes(acctType) && !isNaN(value)) {
+      accountBalances[acctType] = new Decimal(value);
     }
   }
 

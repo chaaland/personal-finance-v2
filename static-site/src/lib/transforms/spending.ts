@@ -1,10 +1,11 @@
 /**
  * Spending calculations and transformations.
- * Mirrors Python transforms/spending.py
  */
 
 import Decimal from 'decimal.js';
-import { query } from '$lib/data/database';
+import { query, queryDecimal } from '$lib/data/database';
+import { formatUsd } from '$lib/theme';
+import { compareToPrevious } from './compare';
 import type { SpendingDetails, MonthlySpendingRow, SpendingByYear } from '$lib/data/types';
 
 interface CombinedSpendingRow {
@@ -13,17 +14,18 @@ interface CombinedSpendingRow {
 }
 
 /**
+ * Latest year present in the spending data. Reused as a subquery below.
+ */
+const LATEST_SPEND_YEAR = `(SELECT EXTRACT(YEAR FROM MAX(dates)) FROM all_spend)`;
+
+/**
  * Get combined US and UK spending with USD values.
  */
-export async function getCombinedSpending(): Promise<CombinedSpendingRow[]> {
+async function getCombinedSpending(): Promise<CombinedSpendingRow[]> {
   const sql = `
     WITH combined AS (
-      SELECT dates, SUM(total * conversion) AS total_usd
-      FROM (
-        SELECT dates, total, conversion FROM us_spend
-        UNION ALL
-        SELECT dates, total, conversion FROM uk_spend
-      )
+      SELECT dates, SUM(total_usd) AS total_usd
+      FROM all_spend
       GROUP BY dates
     ),
     first_spend AS (
@@ -45,26 +47,11 @@ export async function getCombinedSpending(): Promise<CombinedSpendingRow[]> {
 /**
  * Get year-to-date spending total in USD.
  */
-export async function getYtdSpending(): Promise<Decimal> {
-  const sql = `
-    WITH current_year AS (
-      SELECT EXTRACT(YEAR FROM MAX(dates)) AS year
-      FROM (SELECT dates FROM us_spend UNION ALL SELECT dates FROM uk_spend)
-    )
-    SELECT SUM(total_usd) AS ytd_spend
-    FROM (
-      SELECT dates, total * conversion AS total_usd FROM us_spend
-      UNION ALL
-      SELECT dates, total * conversion AS total_usd FROM uk_spend
-    ), current_year
-    WHERE EXTRACT(YEAR FROM dates) = current_year.year
-  `;
-
-  const rows = await query<{ ytd_spend: number }>(sql);
-  if (rows.length === 0 || rows[0].ytd_spend === null) {
-    return new Decimal(0);
-  }
-  return new Decimal(rows[0].ytd_spend);
+async function getYtdSpending(): Promise<Decimal> {
+  return queryDecimal(`
+    SELECT SUM(total_usd) FROM all_spend
+    WHERE EXTRACT(YEAR FROM dates) = ${LATEST_SPEND_YEAR}
+  `);
 }
 
 /**
@@ -72,62 +59,26 @@ export async function getYtdSpending(): Promise<Decimal> {
  * Formula: (YTD spend) * (12 / months_elapsed)
  */
 export async function getProjectedAnnualSpend(): Promise<Decimal> {
-  const sql = `
-    WITH combined AS (
-      SELECT dates, total * conversion AS total_usd FROM us_spend
-      UNION ALL
-      SELECT dates, total * conversion AS total_usd FROM uk_spend
-    ),
-    current_info AS (
-      SELECT
-        MAX(dates) AS max_date,
-        EXTRACT(YEAR FROM MAX(dates)) AS current_year,
-        EXTRACT(MONTH FROM MAX(dates)) AS months_elapsed
-      FROM combined
-    ),
-    ytd AS (
-      SELECT SUM(total_usd) AS ytd_spend
-      FROM combined, current_info
-      WHERE EXTRACT(YEAR FROM dates) = current_info.current_year
-    )
-    SELECT
-      CASE
-        WHEN current_info.months_elapsed = 0 THEN 0
-        ELSE ytd.ytd_spend * 12.0 / current_info.months_elapsed
-      END AS projected_annual
-    FROM ytd, current_info
-  `;
-
-  const rows = await query<{ projected_annual: number }>(sql);
-  if (rows.length === 0 || rows[0].projected_annual === null) {
-    return new Decimal(0);
-  }
-  return new Decimal(rows[0].projected_annual);
+  const [ytd, monthsElapsed] = await Promise.all([getYtdSpending(), getMonthsElapsed()]);
+  return monthsElapsed === 0 ? new Decimal(0) : ytd.mul(12).div(monthsElapsed);
 }
 
 /**
  * Get total spending for the previous full year.
  */
 export async function getPreviousYearSpending(): Promise<Decimal> {
-  const sql = `
-    WITH combined AS (
-      SELECT dates, total * conversion AS total_usd FROM us_spend
-      UNION ALL
-      SELECT dates, total * conversion AS total_usd FROM uk_spend
-    ),
-    previous_year AS (
-      SELECT EXTRACT(YEAR FROM MAX(dates)) - 1 AS year FROM combined
-    )
-    SELECT SUM(total_usd) AS prev_year_spend
-    FROM combined, previous_year
-    WHERE EXTRACT(YEAR FROM dates) = previous_year.year
-  `;
+  return queryDecimal(`
+    SELECT SUM(total_usd) FROM all_spend
+    WHERE EXTRACT(YEAR FROM dates) = ${LATEST_SPEND_YEAR} - 1
+  `);
+}
 
-  const rows = await query<{ prev_year_spend: number }>(sql);
-  if (rows.length === 0 || rows[0].prev_year_spend === null) {
-    return new Decimal(0);
-  }
-  return new Decimal(rows[0].prev_year_spend);
+/**
+ * Month number (1-12) of the latest spending record, i.e. how much of the
+ * current year the data covers. 0 when there is no data.
+ */
+async function getMonthsElapsed(): Promise<number> {
+  return (await queryDecimal(`SELECT EXTRACT(MONTH FROM MAX(dates)) FROM all_spend`)).toNumber();
 }
 
 /**
@@ -135,56 +86,32 @@ export async function getPreviousYearSpending(): Promise<Decimal> {
  * Returns [absolute_difference, percentage_difference]
  */
 export async function getYoySpendingComparison(): Promise<[Decimal, Decimal]> {
-  const projected = await getProjectedAnnualSpend();
-  const previous = await getPreviousYearSpending();
-
-  if (previous.isZero()) {
-    return [projected, new Decimal(0)];
-  }
-
-  const absoluteDiff = projected.minus(previous);
-  const percentageDiff = absoluteDiff.div(previous).mul(100);
-
-  return [absoluteDiff, percentageDiff];
+  const [projected, previous] = await Promise.all([
+    getProjectedAnnualSpend(),
+    getPreviousYearSpending(),
+  ]);
+  return compareToPrevious(projected, previous);
 }
 
 /**
  * Get detailed spending projection info.
  */
 export async function getSpendingProjectionDetails(): Promise<SpendingDetails> {
-  const sql = `
-    WITH combined AS (
-      SELECT dates, total * conversion AS total_usd FROM us_spend
-      UNION ALL
-      SELECT dates, total * conversion AS total_usd FROM uk_spend
-    ),
-    current_info AS (
-      SELECT
-        MAX(dates) AS max_date,
-        EXTRACT(YEAR FROM MAX(dates)) AS current_year,
-        EXTRACT(MONTH FROM MAX(dates)) AS months_elapsed
-      FROM combined
-    )
-    SELECT
-      current_info.current_year,
-      current_info.months_elapsed
-    FROM current_info
-  `;
-
-  const rows = await query<{ current_year: number; months_elapsed: number }>(sql);
-  const currentYear = rows.length > 0 ? rows[0].current_year : new Date().getFullYear();
-  const monthsElapsed = rows.length > 0 ? rows[0].months_elapsed : 1;
-
-  const ytdSpend = await getYtdSpending();
-  const projected = await getProjectedAnnualSpend();
-  const previous = await getPreviousYearSpending();
-  const [change, changePct] = await getYoySpendingComparison();
+  const [currentYear, monthsElapsed, ytdSpend, previous] = await Promise.all([
+    queryDecimal(`SELECT ${LATEST_SPEND_YEAR}`),
+    getMonthsElapsed(),
+    getYtdSpending(),
+    getPreviousYearSpending(),
+  ]);
+  const projected = monthsElapsed === 0 ? new Decimal(0) : ytdSpend.mul(12).div(monthsElapsed);
+  const [change, changePct] = compareToPrevious(projected, previous);
+  const year = currentYear.toNumber() || new Date().getFullYear();
 
   return {
     projectedValue: projected.toNumber(),
-    currentYear,
+    currentYear: year,
     previousValue: previous.toNumber(),
-    previousYear: currentYear - 1,
+    previousYear: year - 1,
     ytdSpend: ytdSpend.toNumber(),
     monthsElapsed,
     change: change.toNumber(),
@@ -197,7 +124,7 @@ export async function getSpendingProjectionDetails(): Promise<SpendingDetails> {
  */
 export function formatSpendingExplanation(details: SpendingDetails): string {
   const monthWord = details.monthsElapsed === 1 ? 'month' : 'months';
-  return `Based on $${details.ytdSpend.toLocaleString('en-US', { maximumFractionDigits: 0 })} spent over ${details.monthsElapsed} ${monthWord}, projecting $${details.projectedValue.toLocaleString('en-US', { maximumFractionDigits: 0 })} vs $${details.previousValue.toLocaleString('en-US', { maximumFractionDigits: 0 })} in ${details.previousYear}`;
+  return `Based on ${formatUsd(details.ytdSpend)} spent over ${details.monthsElapsed} ${monthWord}, projecting ${formatUsd(details.projectedValue)} vs ${formatUsd(details.previousValue)} in ${details.previousYear}`;
 }
 
 /**
@@ -255,16 +182,11 @@ export async function getMonthlySpendingWithMedian(
  */
 export async function getSpendingByYear(): Promise<SpendingByYear[]> {
   const sql = `
-    WITH combined AS (
-      SELECT dates, total * conversion AS total_usd FROM us_spend
-      UNION ALL
-      SELECT dates, total * conversion AS total_usd FROM uk_spend
-    ),
-    by_year AS (
+    WITH by_year AS (
       SELECT
         EXTRACT(YEAR FROM dates)::INTEGER AS year,
         SUM(total_usd) AS total_usd
-      FROM combined
+      FROM all_spend
       GROUP BY EXTRACT(YEAR FROM dates)
     ),
     first_year AS (

@@ -1,10 +1,10 @@
 /**
  * Net worth calculations and transformations.
- * Mirrors Python transforms/networth.py
  */
 
 import Decimal from 'decimal.js';
 import { query } from '$lib/data/database';
+import { formatUsd } from '$lib/theme';
 import type { CombinedNetworth, NetworthChangeDetails, YoyNetworthChange } from '$lib/data/types';
 
 interface NetworthRow {
@@ -16,7 +16,6 @@ interface NetworthRow {
 
 /**
  * Get combined US and UK net worth with forward-fill interpolation.
- * Replaces Polars join_asof with SQL subqueries.
  */
 export async function getCombinedNetworth(): Promise<CombinedNetworth[]> {
   const sql = `
@@ -77,40 +76,42 @@ export async function getCurrentNetworth(): Promise<Decimal> {
 }
 
 /**
+ * Find the points a year-to-date change is measured between: the latest
+ * observation (end) and the first observation of its year (start). When the
+ * latest year has only one observation, the last observation of the previous
+ * year is used as the start instead. `start` is null when no baseline exists.
+ */
+function getYtdBounds(
+  combined: CombinedNetworth[]
+): { start: CombinedNetworth | null; end: CombinedNetworth } | null {
+  if (combined.length === 0) {
+    return null;
+  }
+
+  const end = combined[combined.length - 1];
+  const currentYear = end.dates.getFullYear();
+  const yearData = combined.filter((row) => row.dates.getFullYear() === currentYear);
+
+  if (yearData.length > 1) {
+    return { start: yearData[0], end };
+  }
+
+  const prevYearData = combined.filter((row) => row.dates.getFullYear() === currentYear - 1);
+  return { start: prevYearData.length > 0 ? prevYearData[prevYearData.length - 1] : null, end };
+}
+
+/**
  * Get year-to-date net worth change.
  * Returns [absolute_change, percentage_change]
  */
 export async function getYtdNetworthChange(): Promise<[Decimal, Decimal]> {
-  const combined = await getCombinedNetworth();
-  if (combined.length === 0) {
+  const bounds = getYtdBounds(await getCombinedNetworth());
+  if (!bounds?.start) {
     return [new Decimal(0), new Decimal(0)];
   }
 
-  const mostRecentDate = combined[combined.length - 1].dates;
-  const currentYear = mostRecentDate.getFullYear();
-  const currentValue = new Decimal(combined[combined.length - 1].totalUsd);
-
-  // Get data for current year
-  const yearData = combined.filter((row) => row.dates.getFullYear() === currentYear);
-
-  if (yearData.length === 0) {
-    return [new Decimal(0), new Decimal(0)];
-  }
-
-  let startValue: Decimal;
-
-  // If only one data point this year (January), compare against December of previous year
-  if (yearData.length === 1) {
-    const prevYearData = combined.filter((row) => row.dates.getFullYear() === currentYear - 1);
-    if (prevYearData.length === 0) {
-      return [new Decimal(0), new Decimal(0)];
-    }
-    startValue = new Decimal(prevYearData[prevYearData.length - 1].totalUsd);
-  } else {
-    startValue = new Decimal(yearData[0].totalUsd);
-  }
-
-  const absoluteChange = currentValue.minus(startValue);
+  const startValue = new Decimal(bounds.start.totalUsd);
+  const absoluteChange = new Decimal(bounds.end.totalUsd).minus(startValue);
   const percentageChange = startValue.isZero()
     ? new Decimal(0)
     : absoluteChange.div(startValue).mul(100);
@@ -122,58 +123,26 @@ export async function getYtdNetworthChange(): Promise<[Decimal, Decimal]> {
  * Get detailed YTD net worth change info including dates.
  */
 export async function getYtdNetworthDetails(): Promise<NetworthChangeDetails> {
-  const combined = await getCombinedNetworth();
+  const bounds = getYtdBounds(await getCombinedNetworth());
 
-  if (combined.length === 0) {
-    return {
-      startValue: 0,
-      startDate: 'N/A',
-      endValue: 0,
-      endDate: 'N/A',
-      change: 0,
-      changePct: 0,
-    };
+  if (!bounds) {
+    return { startValue: 0, startDate: 'N/A', endValue: 0, endDate: 'N/A', change: 0, changePct: 0 };
   }
 
-  const mostRecentDate = combined[combined.length - 1].dates;
-  const currentYear = mostRecentDate.getFullYear();
-  const currentValue = combined[combined.length - 1].totalUsd;
-
-  const yearData = combined.filter((row) => row.dates.getFullYear() === currentYear);
-
-  let startValue: number;
-  let startDate: Date;
-
-  if (yearData.length <= 1) {
-    // Compare against December of previous year
-    const prevYearData = combined.filter((row) => row.dates.getFullYear() === currentYear - 1);
-    if (prevYearData.length === 0) {
-      return {
-        startValue: 0,
-        startDate: 'N/A',
-        endValue: currentValue,
-        endDate: formatDate(mostRecentDate),
-        change: 0,
-        changePct: 0,
-      };
-    }
-    startValue = prevYearData[prevYearData.length - 1].totalUsd;
-    startDate = prevYearData[prevYearData.length - 1].dates;
-  } else {
-    startValue = yearData[0].totalUsd;
-    startDate = yearData[0].dates;
+  const { start, end } = bounds;
+  const endDate = formatDate(end.dates);
+  if (!start) {
+    return { startValue: 0, startDate: 'N/A', endValue: end.totalUsd, endDate, change: 0, changePct: 0 };
   }
 
-  const change = currentValue - startValue;
-  const changePct = startValue !== 0 ? (change / startValue) * 100 : 0;
-
+  const change = end.totalUsd - start.totalUsd;
   return {
-    startValue,
-    startDate: formatDate(startDate),
-    endValue: currentValue,
-    endDate: formatDate(mostRecentDate),
+    startValue: start.totalUsd,
+    startDate: formatDate(start.dates),
+    endValue: end.totalUsd,
+    endDate,
     change,
-    changePct,
+    changePct: start.totalUsd !== 0 ? (change / start.totalUsd) * 100 : 0,
   };
 }
 
@@ -182,7 +151,7 @@ export async function getYtdNetworthDetails(): Promise<NetworthChangeDetails> {
  */
 export function formatNetworthExplanation(details: NetworthChangeDetails): string {
   const direction = details.change >= 0 ? 'Increased' : 'Decreased';
-  return `${direction} from $${details.startValue.toLocaleString('en-US', { maximumFractionDigits: 0 })} on ${details.startDate} to $${details.endValue.toLocaleString('en-US', { maximumFractionDigits: 0 })} on ${details.endDate}`;
+  return `${direction} from ${formatUsd(details.startValue)} on ${details.startDate} to ${formatUsd(details.endValue)} on ${details.endDate}`;
 }
 
 /**
@@ -247,102 +216,40 @@ export interface AllocationItem {
   value: number;
 }
 
+type Region = 'US' | 'UK' | 'All';
+
 /**
- * Get asset allocation grouped by asset (stock) for a specific region.
- * @param region One of "US", "UK", or "All"
+ * Sum asset allocation by the given column for a region, in USD.
+ * UK holdings are converted with their stored GBP/USD rate.
  * @returns Array of { label, value } sorted by value descending
  */
-export async function getAssetAllocationByStock(
-  region: 'US' | 'UK' | 'All'
+async function getAssetAllocation(
+  column: 'asset' | 'account_type',
+  region: Region
 ): Promise<AllocationItem[]> {
-  let sql: string;
+  const us = `SELECT ${column} AS label, value FROM us_asset_allocation`;
+  const uk = `SELECT ${column} AS label, value * conversion AS value FROM uk_asset_allocation`;
+  const source = region === 'US' ? us : region === 'UK' ? uk : `${us} UNION ALL ${uk}`;
 
-  if (region === 'US') {
-    sql = `
-      SELECT asset AS label, SUM(value) AS value
-      FROM us_asset_allocation
-      GROUP BY asset
-      ORDER BY value DESC
-    `;
-  } else if (region === 'UK') {
-    sql = `
-      SELECT asset AS label, SUM(value * conversion) AS value
-      FROM uk_asset_allocation
-      GROUP BY asset
-      ORDER BY value DESC
-    `;
-  } else {
-    // All - combine US and UK
-    sql = `
-      SELECT label, SUM(value) AS value
-      FROM (
-        SELECT asset AS label, value FROM us_asset_allocation
-        UNION ALL
-        SELECT asset AS label, value * conversion AS value FROM uk_asset_allocation
-      )
-      GROUP BY label
-      ORDER BY value DESC
-    `;
-  }
+  const rows = await query<{ label: string; value: number }>(`
+    SELECT label, SUM(value) AS value
+    FROM (${source})
+    GROUP BY label
+    ORDER BY value DESC
+  `);
+  return rows.map((row) => ({ label: row.label, value: Number(row.value) }));
+}
 
-  interface RawRow {
-    label: string;
-    value: number;
-  }
-
-  const rows = await query<RawRow>(sql);
-  return rows.map((row) => ({
-    label: row.label,
-    value: Number(row.value),
-  }));
+/**
+ * Get asset allocation grouped by asset (stock) for a specific region.
+ */
+export function getAssetAllocationByStock(region: Region): Promise<AllocationItem[]> {
+  return getAssetAllocation('asset', region);
 }
 
 /**
  * Get asset allocation grouped by account type for a specific region.
- * @param region One of "US", "UK", or "All"
- * @returns Array of { label, value } sorted by value descending
  */
-export async function getAssetAllocationByAccountType(
-  region: 'US' | 'UK' | 'All'
-): Promise<AllocationItem[]> {
-  let sql: string;
-
-  if (region === 'US') {
-    sql = `
-      SELECT account_type AS label, SUM(value) AS value
-      FROM us_asset_allocation
-      GROUP BY account_type
-      ORDER BY value DESC
-    `;
-  } else if (region === 'UK') {
-    sql = `
-      SELECT account_type AS label, SUM(value * conversion) AS value
-      FROM uk_asset_allocation
-      GROUP BY account_type
-      ORDER BY value DESC
-    `;
-  } else {
-    // All - combine US and UK
-    sql = `
-      SELECT label, SUM(value) AS value
-      FROM (
-        SELECT account_type AS label, value FROM us_asset_allocation
-        UNION ALL
-        SELECT account_type AS label, value * conversion AS value FROM uk_asset_allocation
-      )
-      GROUP BY label
-      ORDER BY value DESC
-    `;
-  }
-
-  interface RawRow {
-    label: string;
-    value: number;
-  }
-
-  const rows = await query<RawRow>(sql);
-  return rows.map((row) => ({
-    label: row.label,
-    value: Number(row.value),
-  }));
+export function getAssetAllocationByAccountType(region: Region): Promise<AllocationItem[]> {
+  return getAssetAllocation('account_type', region);
 }
