@@ -203,8 +203,18 @@ npm run build   # outputs to static-site/dist/
 
 ## FIRE Methodology
 
-The FIRE tab uses a **Least Absolute Deviation (LAD) regression** on historical net worth data to project a FIRE date. LAD is preferred over ordinary least squares because it is robust to outliers (market crashes, windfalls) that would skew an OLS fit.
+The FIRE date comes from a **Monte Carlo simulation** of a simple savings-plus-return model, in today's dollars:
 
-The projected FIRE date is calculated against your FIRE target (default **$4,250,000**; adjustable from $1M to $10M in Settings and remembered in your browser) at safe withdrawal rates of 3%, 3.5%, 4%, and 4.5%.
+```
+net worth next month = net worth × (1 + return) + savings
+```
+
+- **Savings** are the last 12 months of take-home pay minus spending, held flat. A full year is used so the result does not depend on when bonuses happen to land.
+- **Returns** are random each month. The average is your *expected real return* (Settings; default 5% after inflation). The volatility is estimated from your own history, using the returns implied by your net worth changes once savings are removed (15% if there are fewer than three years of clean history).
+- The simulation runs 5,000 paths over 30 years with a fixed random seed, so results are repeatable. The headline is the **median** date with a **10th–90th percentile range**; the withdrawal-rate chart and the net worth chart reuse the same paths.
+
+Your history can say a lot about volatility but very little about the average return (a decade of data pins it down to only about ±5 points), which is why the expected return is an assumption you set rather than something fitted. A straight-line fit to past net worth growth was used previously; it under-projected because it ignored compounding and could not separate savings from market returns.
+
+The projection is against your FIRE target (default **$4,250,000**; adjustable from $1M to $10M in Settings and remembered in your browser), expressed in today's dollars, at safe withdrawal rates of 3%, 3.5%, 4%, and 4.5%. Net worth counts every account regardless of when it can be accessed.
 
 The retirement drawdown simulation applies account-specific growth rates and models the withdrawal order across account types (taxable → tax-deferred → tax-free) to project portfolio longevity.
