@@ -3,6 +3,7 @@
   import { initializeDatabase } from '$lib/data/database';
   import { loadExcelFile, type LoadError, type LoadProgress } from '$lib/data/loader';
   import { Header, TabBar, EmptyState, ErrorDisplay } from '$lib/components';
+  import type { TabId } from '$lib/components/TabBar.svelte';
   import { SummaryTab, NetWorthTab, IncomeTab, SpendingTab, FIRETab } from '$lib/components/tabs';
   import { theme } from '$lib/stores/theme.svelte';
 
@@ -13,12 +14,11 @@
   type LoadingPhase = 'idle' | 'initializing' | 'processing' | 'ready' | 'error';
 
   let hasData = $state(false);
-  let activeTab = $state('summary');
+  let activeTab = $state<TabId>('summary');
   let loadingPhase = $state<LoadingPhase>('initializing');
   let loadingMessage = $state('Initializing database...');
   let errors = $state<LoadError[]>([]);
   let warnings = $state<LoadError[]>([]);
-  let fileInputRef = $state<HTMLInputElement | null>(null);
 
   onMount(async () => {
     try {
@@ -75,10 +75,6 @@
     loadingPhase = 'idle';
     hasData = false;
   }
-
-  function handleTabChange(tab: string) {
-    activeTab = tab;
-  }
 </script>
 
 <div class="app">
@@ -94,7 +90,7 @@
   {:else if !hasData}
     <EmptyState />
   {:else}
-    <TabBar {activeTab} onTabChange={handleTabChange} />
+    <TabBar bind:activeTab />
     <main class="content">
       {#if activeTab === 'summary'}
         <SummaryTab />
@@ -104,12 +100,8 @@
         <IncomeTab />
       {:else if activeTab === 'spending'}
         <SpendingTab />
-      {:else if activeTab === 'fire'}
-        <FIRETab />
       {:else}
-        <div class="placeholder">
-          <p>{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} tab coming soon...</p>
-        </div>
+        <FIRETab />
       {/if}
     </main>
   {/if}
@@ -150,19 +142,5 @@
     to {
       transform: rotate(360deg);
     }
-  }
-
-  .placeholder {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 300px;
-    color: var(--color-text-muted);
-    font-size: 18px;
-    font-style: italic;
-  }
-
-  .placeholder p {
-    margin: 0;
   }
 </style>

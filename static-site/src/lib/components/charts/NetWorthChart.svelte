@@ -1,10 +1,6 @@
 <script lang="ts">
-  import { onDestroy } from 'svelte';
-  import Plotly from 'plotly.js-dist-min';
-  import { getColors, getChartTemplate } from '$lib/theme';
-  import { theme } from '$lib/stores/theme.svelte';
-  import type { FireProjectionSeries } from '$lib/data/types';
-  import type { CombinedNetworth } from '$lib/data/types';
+  import PlotlyChart, { type ChartContext, type ChartSpec } from './PlotlyChart.svelte';
+  import type { FireProjectionSeries, CombinedNetworth } from '$lib/data/types';
 
   interface Props {
     data: FireProjectionSeries;
@@ -13,81 +9,45 @@
 
   let { data, combinedData }: Props = $props();
 
-  let chartElement: HTMLDivElement;
+  function build({ colors }: ChartContext): ChartSpec {
+    const combinedDates = combinedData.map((p) => p.dates);
+    const hover = '$%{y:,.0f}<extra></extra>';
 
-  onDestroy(() => {
-    if (chartElement) {
-      Plotly.purge(chartElement);
-    }
-  });
+    const traces: ChartSpec['traces'] = [
+      // Total net worth: primary line with fill
+      {
+        x: data.historical.map((p) => p.dates),
+        y: data.historical.map((p) => p.totalUsd),
+        name: 'Total',
+        type: 'scatter',
+        mode: 'lines',
+        line: { color: colors.chart1, width: 2.5 },
+        fill: 'tozeroy',
+        fillcolor: colors.accentGlow,
+        hovertemplate: hover,
+      },
+      // US and UK: secondary dotted lines
+      {
+        x: combinedDates,
+        y: combinedData.map((p) => p.usUsd),
+        name: 'US',
+        type: 'scatter',
+        mode: 'lines',
+        line: { color: colors.chart2, width: 1.5, dash: 'dot' },
+        hovertemplate: hover,
+      },
+      {
+        x: combinedDates,
+        y: combinedData.map((p) => p.ukUsd),
+        name: 'UK',
+        type: 'scatter',
+        mode: 'lines',
+        line: { color: colors.chart3, width: 1.5, dash: 'dot' },
+        hovertemplate: hover,
+      },
+    ];
 
-  const hasData = $derived(data.historical.length > 0);
-
-  function renderChart(isDark: boolean) {
-    if (!chartElement) return;
-    const colors = getColors(isDark);
-    const template = getChartTemplate(isDark);
-
-    if (!hasData) {
-      const layout: Partial<Plotly.Layout> = {
-        ...template,
-        title: 'Net Worth Over Time',
-        annotations: [
-          {
-            text: 'No data available',
-            xref: 'paper',
-            yref: 'paper',
-            x: 0.5,
-            y: 0.5,
-            showarrow: false,
-            font: { size: 14, color: colors.textSecondary },
-          },
-        ],
-        height: 400,
-      };
-
-      Plotly.newPlot(chartElement, [], layout, { displayModeBar: false });
-      return;
-    }
-
-    const traces: Partial<Plotly.PlotData>[] = [];
-
-    // Total net worth (primary line with fill)
-    traces.push({
-      x: data.historical.map((p) => p.dates),
-      y: data.historical.map((p) => p.totalUsd),
-      name: 'Total',
-      type: 'scatter',
-      mode: 'lines',
-      line: { color: colors.chart1, width: 2.5 },
-      fill: 'tozeroy',
-      fillcolor: colors.accentGlow,
-      hovertemplate: '$%{y:,.0f}<extra></extra>',
-    });
-
-    // US net worth (secondary dotted line)
-    traces.push({
-      x: combinedData.map((p) => p.dates),
-      y: combinedData.map((p) => p.usUsd),
-      name: 'US',
-      type: 'scatter',
-      mode: 'lines',
-      line: { color: colors.chart2, width: 1.5, dash: 'dot' },
-      hovertemplate: '$%{y:,.0f}<extra></extra>',
-    });
-
-    // UK net worth (secondary dotted line)
-    traces.push({
-      x: combinedData.map((p) => p.dates),
-      y: combinedData.map((p) => p.ukUsd),
-      name: 'UK',
-      type: 'scatter',
-      mode: 'lines',
-      line: { color: colors.chart3, width: 1.5, dash: 'dot' },
-      hovertemplate: '$%{y:,.0f}<extra></extra>',
-    });
-
-    // Projected net worth (dashed line)
+    // Projected net worth: dashed line
     if (data.projection.length > 0) {
       traces.push({
         x: data.projection.map((p) => p.dates),
@@ -100,16 +60,10 @@
       });
     }
 
-    // FIRE target threshold (horizontal dotted line)
-    const allDates = [
-      ...data.historical.map((p) => p.dates),
-      ...data.projection.map((p) => p.dates),
-    ];
-    const minDate = allDates.length > 0 ? new Date(Math.min(...allDates.map((d) => d.getTime()))) : new Date();
-    const maxDate = allDates.length > 0 ? new Date(Math.max(...allDates.map((d) => d.getTime()))) : new Date();
-
+    // FIRE target: horizontal dotted line spanning all dates
+    const times = [...data.historical, ...data.projection].map((p) => p.dates.getTime());
     traces.push({
-      x: [minDate, maxDate],
+      x: [new Date(Math.min(...times)), new Date(Math.max(...times))],
       y: [data.fireGoal, data.fireGoal],
       name: 'FIRE Target',
       type: 'scatter',
@@ -118,42 +72,16 @@
       hovertemplate: 'FIRE Target: $%{y:,.0f}<extra></extra>',
     });
 
-    const layout: Partial<Plotly.Layout> = {
-      ...template,
-      title: 'Net Worth Over Time',
-      xaxis: {
-        ...template.xaxis,
-        title: '',
+    return {
+      traces,
+      layout: {
+        yaxis: { tickprefix: '$' },
+        hovermode: 'x unified',
+        legend: { font: { size: 13 } },
+        margin: { t: 80, r: 24, b: 48, l: 60 },
       },
-      yaxis: {
-        ...template.yaxis,
-        title: '',
-        tickprefix: '$',
-      },
-      height: 400,
-      hovermode: 'x unified',
-      legend: {
-        ...template.legend,
-        font: { ...template.legend.font, size: 13 },
-      },
-      margin: { t: 80, r: 24, b: 48, l: 60 },
     };
-
-    Plotly.newPlot(chartElement, traces, layout, { displayModeBar: false });
   }
-
-  $effect(() => {
-    if (chartElement && data) {
-      renderChart(theme.isDark);
-    }
-  });
 </script>
 
-<div class="chart-container" bind:this={chartElement}></div>
-
-<style>
-  .chart-container {
-    width: 100%;
-    min-height: 400px;
-  }
-</style>
+<PlotlyChart title="Net Worth Over Time" empty={data.historical.length === 0} {build} />

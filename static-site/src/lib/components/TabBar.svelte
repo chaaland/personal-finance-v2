@@ -1,12 +1,5 @@
-<script lang="ts">
-  interface Props {
-    activeTab: string;
-    onTabChange: (tab: string) => void;
-  }
-
-  let { activeTab, onTabChange }: Props = $props();
-
-  const tabs = [
+<script lang="ts" module>
+  export const TABS = [
     { id: 'summary', label: 'Summary' },
     { id: 'networth', label: 'Net Worth' },
     { id: 'income', label: 'Income' },
@@ -14,18 +7,20 @@
     { id: 'fire', label: 'FIRE' },
   ] as const;
 
-  function handleTabClick(tabId: string) {
-    onTabChange(tabId);
-  }
+  export type TabId = (typeof TABS)[number]['id'];
+</script>
+
+<script lang="ts">
+  let { activeTab = $bindable() }: { activeTab: TabId } = $props();
 </script>
 
 <nav class="tab-bar">
-  {#each tabs as tab}
+  {#each TABS as tab}
     <button
       type="button"
       class="tab"
       class:active={activeTab === tab.id}
-      onclick={() => handleTabClick(tab.id)}
+      onclick={() => (activeTab = tab.id)}
     >
       {tab.label}
     </button>

@@ -69,3 +69,12 @@ body {
     background-color 0.25s ease,
     color 0.25s ease;
 }
+
+/* Card that wraps a chart on the dashboard tabs */
+.chart-section {
+  background: var(--color-card);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 24px;
+  border: 1px solid var(--color-border);
+}
