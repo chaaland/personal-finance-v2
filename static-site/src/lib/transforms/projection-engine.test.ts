@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { estimateAnnualSavings, impliedMonthlyReturns, estimateVolatility, simulate, savingsByMonth, monthEndNetWorth, addMonths, chartHorizonMonths } from './projection-engine.ts';
+import { estimateAnnualSavings, impliedMonthlyReturns, estimateVolatility, simulate, savingsByMonth, monthEndNetWorth, addMonths } from './projection-engine.ts';
 
 describe('estimateAnnualSavings', () => {
   it('is the total of the last 12 months', () => {
@@ -212,24 +212,5 @@ describe('addMonths', () => {
   it('clamps to the end of a shorter month instead of spilling into the next', () => {
     assert.equal(iso(addMonths(new Date('2026-01-31T00:00:00Z'), 1)), '2026-02-28');
     assert.equal(iso(addMonths(new Date('2027-12-31T00:00:00Z'), 2)), '2028-02-29'); // leap year
-  });
-});
-
-describe('chartHorizonMonths', () => {
-  it('shows at least 5 years so the range has room to fan out', () => {
-    assert.equal(chartHorizonMonths(20), 60); // FIRE 20 months away: 25 would be too short to read
-    assert.equal(chartHorizonMonths(0), 60);
-  });
-
-  it('extends to a quarter beyond the median when that is longer', () => {
-    assert.equal(chartHorizonMonths(100), 125);
-  });
-
-  it('caps at 15 years', () => {
-    assert.equal(chartHorizonMonths(300), 180);
-  });
-
-  it('uses 10 years when there is no median', () => {
-    assert.equal(chartHorizonMonths(null), 120);
   });
 });
