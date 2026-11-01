@@ -54,13 +54,20 @@ interface SheetLoader {
  * (with embedded quotes stripped).
  */
 function parseDate(value: string | number | Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+
   if (value instanceof Date) {
-    return value.toISOString().split('T')[0];
+    // Round to the nearest local day. Reading the local components directly (or toISOString,
+    // which converts to UTC) is off by the UTC offset or by odd historical offsets (e.g. Paris).
+    // The workbook is read without cellDates so this is only a safety net.
+    const d = new Date(value.getTime() + 12 * 60 * 60 * 1000);
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   }
 
   if (typeof value === 'number') {
+    // Excel serial date: no timezone involved
     const date = XLSX.SSF.parse_date_code(value);
-    return `${date.y}-${String(date.m).padStart(2, '0')}-${String(date.d).padStart(2, '0')}`;
+    return `${date.y}-${pad(date.m)}-${pad(date.d)}`;
   }
 
   const dateStr = String(value).replace(/"/g, '');
@@ -269,7 +276,9 @@ export async function loadExcelFile(
   try {
     onProgress?.({ phase: 'reading', message: 'Reading Excel file...' });
     const buffer = await file.arrayBuffer();
-    const workbook = XLSX.read(buffer, { type: 'array', cellDates: true });
+    // No cellDates: date cells stay as Excel serial numbers, which parseDate() converts
+    // exactly. JS Dates built by SheetJS depend on the browser's timezone.
+    const workbook = XLSX.read(buffer, { type: 'array' });
 
     await createTables();
 
